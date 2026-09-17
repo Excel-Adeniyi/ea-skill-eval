@@ -24,7 +24,6 @@ impl MetricScore {
 
 #[cfg(test)]
 mod tests {
-    use crate::domain::metric;
 
     use super::*;
 
