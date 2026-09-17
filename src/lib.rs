@@ -1,3 +1,3 @@
 pub mod domain;
 
-pub use domain::{Metric, ScoreSource, Trace, TraceId};
+pub use domain::{Metric, MetricScore, ScoreSource, Trace, TraceId};
