@@ -1,0 +1,14 @@
+[
+  {
+    "id": "trace-001",
+    "instructions": "Answer using the supplied context.",
+    "task": "Explain Rust structs.",
+    "output": "A struct groups related values."
+  },
+  {
+    "id": "trace-002",
+    "instructions": "Keep the answer concise.",
+    "task": "Explain Rust enums.",
+    "output": "An enum represents one of several possible variants."
+  }
+]
