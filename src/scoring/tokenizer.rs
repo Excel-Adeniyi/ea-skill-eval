@@ -60,4 +60,18 @@ mod tests {
         assert!(!terms.contains("it"));
         assert!(!terms.contains("to"));
     }
+    #[test]
+    fn keeps_single_digit_numbers() {
+        let terms = extract_terms("Create 2 files using v3");
+
+        assert!(terms.contains("2"));
+        assert!(terms.contains("v3"));
+    }
+    #[test]
+    fn repeated_words_count_once() {
+        let terms = extract_terms("report report REPORT");
+
+        assert_eq!(terms.len(), 1);
+        assert!(terms.contains("report"));
+    }
 }
