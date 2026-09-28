@@ -1,4 +1,5 @@
 use std::fmt;
+use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 //  This is a enum for all 5 metrics we need for the eval
@@ -20,6 +21,38 @@ impl Metric {
             Self::InstructionRecall,
             Self::FormatCompliance,
         ]
+    }
+}
+
+/// Returned when a judge names a metric we don't recognise.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("unknown metric name: {0}")]
+pub struct UnknownMetric(pub String);
+
+impl FromStr for Metric {
+    type Err = UnknownMetric;
+
+    /// Parse a metric name from judge output.
+    ///
+    /// Deliberately lenient about case and separators: a model asked for
+    /// "InstructionAdherence" may return "instruction_adherence" or
+    /// "Instruction Adherence", and rejecting a whole response over
+    /// punctuation would waste a 46-second call.
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let normalised: String = value
+            .chars()
+            .filter(|character| character.is_alphanumeric())
+            .flat_map(|character| character.to_lowercase())
+            .collect();
+
+        match normalised.as_str() {
+            "instructionadherence" => Ok(Self::InstructionAdherence),
+            "taskrelevancy" => Ok(Self::TaskRelevancy),
+            "instructionprecision" => Ok(Self::InstructionPrecision),
+            "instructionrecall" => Ok(Self::InstructionRecall),
+            "formatcompliance" => Ok(Self::FormatCompliance),
+            _ => Err(UnknownMetric(value.to_string())),
+        }
     }
 }
 
@@ -60,5 +93,43 @@ mod tests {
         let metric = Metric::InstructionAdherence;
 
         assert_eq!(format!("{metric:?}"), "InstructionAdherence")
+    }
+
+    #[test]
+    fn parses_the_canonical_metric_names() {
+        for metric in Metric::all() {
+            let name = format!("{metric:?}");
+            assert_eq!(name.parse::<Metric>().unwrap(), metric);
+        }
+    }
+
+    #[test]
+    fn parses_loosely_formatted_names_from_judges() {
+        assert_eq!(
+            "instruction_adherence".parse::<Metric>().unwrap(),
+            Metric::InstructionAdherence
+        );
+        assert_eq!(
+            "Instruction Adherence".parse::<Metric>().unwrap(),
+            Metric::InstructionAdherence
+        );
+        assert_eq!(
+            "FORMAT-COMPLIANCE".parse::<Metric>().unwrap(),
+            Metric::FormatCompliance
+        );
+    }
+
+    #[test]
+    fn rejects_names_it_does_not_recognise() {
+        let error = "Helpfulness".parse::<Metric>().unwrap_err();
+
+        assert_eq!(error, UnknownMetric("Helpfulness".to_string()));
+    }
+
+    #[test]
+    fn display_round_trips_through_from_str() {
+        for metric in Metric::all() {
+            assert_eq!(metric.to_string().parse::<Metric>().unwrap(), metric);
+        }
     }
 }

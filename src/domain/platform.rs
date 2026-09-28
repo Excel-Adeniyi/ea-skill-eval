@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 pub enum Platform {
     ClaudeCode,
     CodexCli,
+    QwenCode,
     /// Used for traces captured before the field existed, so old fixtures keep
     /// deserialising instead of failing the whole run.
     #[default]
@@ -23,6 +24,7 @@ impl fmt::Display for Platform {
         let name = match self {
             Self::ClaudeCode => "Claude Code",
             Self::CodexCli => "Codex CLI",
+            Self::QwenCode => "Qwen Code",
             Self::Unknown => "Unknown",
         };
 
@@ -64,6 +66,7 @@ mod tests {
     fn display_uses_human_readable_names() {
         assert_eq!(Platform::ClaudeCode.to_string(), "Claude Code");
         assert_eq!(Platform::CodexCli.to_string(), "Codex CLI");
+        assert_eq!(Platform::QwenCode.to_string(), "Qwen Code");
         assert_eq!(Prompting::Implicit.to_string(), "Implicit");
     }
 
