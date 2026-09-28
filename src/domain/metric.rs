@@ -71,7 +71,6 @@ impl fmt::Display for Metric {
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
 

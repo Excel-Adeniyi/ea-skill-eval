@@ -9,8 +9,8 @@ use anyhow::Result;
 use crate::domain::{MetricScore, Trace};
 use crate::scoring::evaluate_trace;
 
-pub use openai_compatible::{OpenAiCompatibleJudge, OLLAMA_BASE_URL};
-pub use prompt::{build_user_message, PROMPT_VERSION, SYSTEM_PROMPT};
+pub use openai_compatible::{OLLAMA_BASE_URL, OpenAiCompatibleJudge};
+pub use prompt::{PROMPT_VERSION, SYSTEM_PROMPT, build_user_message};
 pub use response::parse_judge_response;
 
 /// Anything that can score a trace.

@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use serde::Deserialize;
 
 use crate::domain::{Metric, MetricScore, Score, ScoreSource};
@@ -108,9 +108,11 @@ mod tests {
     fn tags_every_score_as_coming_from_a_judge() {
         let scores = parse_judge_response(GOOD).expect("should parse");
 
-        assert!(scores
-            .iter()
-            .all(|entry| entry.source == ScoreSource::LlmJudge));
+        assert!(
+            scores
+                .iter()
+                .all(|entry| entry.source == ScoreSource::LlmJudge)
+        );
     }
 
     #[test]

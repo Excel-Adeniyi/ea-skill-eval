@@ -1,12 +1,12 @@
 use std::time::Duration;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use serde::{Deserialize, Serialize};
 
 use crate::domain::{MetricScore, Trace};
-use crate::judge::prompt::{build_user_message, SYSTEM_PROMPT};
-use crate::judge::response::parse_judge_response;
 use crate::judge::Judge;
+use crate::judge::prompt::{SYSTEM_PROMPT, build_user_message};
+use crate::judge::response::parse_judge_response;
 
 /// Ollama's OpenAI-compatible endpoint, served locally by default.
 pub const OLLAMA_BASE_URL: &str = "http://localhost:11434/v1";
@@ -70,7 +70,9 @@ impl Judge for OpenAiCompatibleJudge {
             // Asking for a JSON object up front is what took the probe runs to
             // 4/4 parseable. `parse_judge_response` still defends against
             // fences and prose, because not every endpoint honours this.
-            response_format: ResponseFormat { kind: "json_object" },
+            response_format: ResponseFormat {
+                kind: "json_object",
+            },
             messages: vec![
                 ChatMessage {
                     role: "system",
@@ -188,7 +190,9 @@ mod tests {
         let request = ChatRequest {
             model: "qwen3.6:latest",
             stream: false,
-            response_format: ResponseFormat { kind: "json_object" },
+            response_format: ResponseFormat {
+                kind: "json_object",
+            },
             messages: vec![ChatMessage {
                 role: "user",
                 content: "hello".to_string(),

@@ -51,10 +51,7 @@ mod tests {
         let reference = terms(&["report", "save", "json"]);
         let observed = terms(&["report", "save"]);
 
-        assert_eq!(
-            coverage(&reference, &observed),
-            Some(2.0 / 3.0)
-        );
+        assert_eq!(coverage(&reference, &observed), Some(2.0 / 3.0));
     }
 
     #[test]

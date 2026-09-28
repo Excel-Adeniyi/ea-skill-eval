@@ -1,3 +1,4 @@
+mod evaluation;
 mod metric;
 mod metric_score;
 mod platform;
@@ -5,6 +6,7 @@ mod score;
 mod score_source;
 mod trace;
 
+pub use evaluation::{EvalReport, TraceEvaluation};
 pub use metric::{Metric, UnknownMetric};
 pub use metric_score::MetricScore;
 pub use platform::{Platform, Prompting};

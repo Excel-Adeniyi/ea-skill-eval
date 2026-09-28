@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{Metric, Score, ScoreSource};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 
 pub struct MetricScore {
     pub metric: Metric,

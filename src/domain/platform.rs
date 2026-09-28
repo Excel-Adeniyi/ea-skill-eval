@@ -7,7 +7,9 @@ use serde::{Deserialize, Serialize};
 /// Both current variants are agentic terminal tools, which is what makes the
 /// comparison fair: each can load an instruction file from the repository and
 /// each lets you observe whether the skill actually fired.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Serialize, Deserialize,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum Platform {
     ClaudeCode,
@@ -37,7 +39,9 @@ impl fmt::Display for Platform {
 /// Orthogonal to whether the skill actually ran. The Day 3 experiment is
 /// exactly this pairing: under `Implicit` prompting, does `skill_triggered`
 /// still come back true?
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Default, Serialize, Deserialize,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum Prompting {
     /// The prompt named the skill outright.

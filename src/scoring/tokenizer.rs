@@ -28,7 +28,7 @@ fn stem(word: &str) -> String {
     }
 
     // "ss" is excluded so "class" and "address" survive intact.
-    if word.ends_with('s') && !word.ends_with("ss") && length - 1 >= 2 {
+    if word.ends_with('s') && !word.ends_with("ss") && length > 2 {
         return word[..length - 1].to_string();
     }
 
@@ -47,13 +47,12 @@ pub fn extract_terms(text: &str) -> HashSet<String> {
     text.to_lowercase()
         .split(|character: char| !character.is_alphanumeric())
         .filter(|word| !word.is_empty())
-        .map(|word| stem(word))
+        .map(stem)
         .filter(|word| !is_stopword(word))
         .collect()
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
 

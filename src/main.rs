@@ -1,61 +1,113 @@
-use anyhow::Result;
+use std::process::ExitCode;
 
-use ea_skill_eval::domain::Metric;
-use ea_skill_eval::judge::{score_with_fallback, HeuristicJudge, Judge, OpenAiCompatibleJudge};
+use anyhow::{Context, Result};
+use clap::Parser;
+
+use ea_skill_eval::cli::{Cli, Format, JudgeChoice};
+use ea_skill_eval::domain::{EvalReport, Metric, Trace, TraceEvaluation};
+use ea_skill_eval::judge::{HeuristicJudge, Judge, OpenAiCompatibleJudge, score_with_fallback};
 use ea_skill_eval::load_traces;
+use ea_skill_eval::report;
 
-/// Temporary entry point: Day 2 proves the judge path end to end.
-/// The clap CLI and the table/JSON reports land on Day 3.
+/// Exit code used when traces fall below `--threshold`, so CI can gate on it.
+const EXIT_BELOW_THRESHOLD: u8 = 2;
+
 #[tokio::main]
-async fn main() -> Result<()> {
-    let path = "samples/traces.json";
-    let traces = load_traces(path)?;
+async fn main() -> Result<ExitCode> {
+    let cli = Cli::parse();
 
-    // `--heuristic` skips the network entirely, for fast iteration on output.
-    let use_heuristic = std::env::args().any(|argument| argument == "--heuristic");
+    let path = cli.input.to_string_lossy().to_string();
+    let traces =
+        load_traces(&path).with_context(|| format!("could not load traces from {path}"))?;
 
-    println!("Loaded {} trace(s) from {path}", traces.len());
+    let report = match cli.judge {
+        JudgeChoice::Heuristic => evaluate(&traces, &HeuristicJudge, cli.metric_filter()).await,
+        JudgeChoice::Llm => {
+            let mut judge = OpenAiCompatibleJudge::new(&cli.base_url, &cli.model)?;
+            if let Some(key) = &cli.api_key {
+                judge = judge.with_api_key(key);
+            }
+            evaluate(&traces, &judge, cli.metric_filter()).await
+        }
+    };
 
-    if use_heuristic {
-        let judge = HeuristicJudge;
-        println!("Judge: {}\n", judge.name());
-        report(&traces, &judge).await;
-    } else {
-        let judge = OpenAiCompatibleJudge::ollama("qwen3.6:latest")?;
-        println!("Judge: {} (pass --heuristic to skip the model)\n", judge.name());
-        report(&traces, &judge).await;
+    match cli.format {
+        Format::Json => println!("{}", report::render_json(&report)?),
+        Format::Table => print_tables(&report),
     }
 
-    Ok(())
+    // Threshold is checked after printing, so a failing run still shows why.
+    if let Some(threshold) = cli.threshold {
+        let failing = report.below_threshold(threshold);
+
+        if !failing.is_empty() {
+            eprintln!(
+                "\n{} of {} trace(s) scored below {threshold:.2}: {}",
+                failing.len(),
+                report.evaluations.len(),
+                failing
+                    .iter()
+                    .map(|evaluation| evaluation.trace_id.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            );
+
+            return Ok(ExitCode::from(EXIT_BELOW_THRESHOLD));
+        }
+    }
+
+    Ok(ExitCode::SUCCESS)
 }
 
-async fn report<J: Judge>(traces: &[ea_skill_eval::Trace], judge: &J) {
+/// Score every trace, keeping only the requested metrics.
+async fn evaluate<J: Judge>(
+    traces: &[Trace],
+    judge: &J,
+    metric_filter: Option<Vec<Metric>>,
+) -> EvalReport {
+    let mut evaluations = Vec::with_capacity(traces.len());
+
     for trace in traces {
-        let started = std::time::Instant::now();
-        let (scores, actual_judge, failure) = score_with_fallback(judge, trace).await;
-        let elapsed = started.elapsed();
+        let (mut scores, actual_judge, failure) = score_with_fallback(judge, trace).await;
 
-        println!("{}", "=".repeat(74));
-        println!("{}  —  {}", trace.id.as_str(), trace.task);
-        println!("{}  ·  {actual_judge}  ·  {:.1}s", trace.provenance(), elapsed.as_secs_f64());
-        println!("{}", "=".repeat(74));
-
-        if let Some(reason) = failure {
-            println!("  !! judge failed, fell back to heuristic: {reason}");
+        if let Some(wanted) = &metric_filter {
+            scores.retain(|entry| wanted.contains(&entry.metric));
         }
 
-        for metric in Metric::all() {
-            match scores.iter().find(|entry| entry.metric == metric) {
-                Some(entry) => {
-                    println!("  {:<22} {:>5.2}", metric.to_string(), entry.score.value());
-                    if !entry.reasoning.is_empty() {
-                        println!("      {}", entry.reasoning);
-                    }
-                }
-                None => println!("  {:<22}     -  (not applicable)", metric.to_string()),
-            }
-        }
+        evaluations.push(TraceEvaluation::new(trace, actual_judge, scores, failure));
+    }
 
-        println!();
+    EvalReport::new(judge.name(), evaluations)
+}
+
+fn print_tables(report: &EvalReport) {
+    if report.is_empty() {
+        println!("No traces to evaluate.");
+        return;
+    }
+
+    println!(
+        "\nPer-trace scores  ·  judge requested: {}",
+        report.judge_requested
+    );
+    println!("{}", report::render_traces(report));
+
+    println!("\nPlatform comparison");
+    println!("{}", report::render_platform_comparison(report));
+
+    if let Some(triggers) = report::render_trigger_summary(report) {
+        println!("\nSkill triggering");
+        println!("{triggers}");
+    }
+
+    if let Some(overall) = report.overall_mean() {
+        println!("\nOverall mean: {overall:.2}");
+    }
+
+    let fallbacks = report.fallback_count();
+    if fallbacks > 0 {
+        println!(
+            "Warning: {fallbacks} trace(s) fell back to the heuristic — those rows are not judge scores."
+        );
     }
 }

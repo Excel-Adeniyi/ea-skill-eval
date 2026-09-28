@@ -60,11 +60,11 @@ static ASKS_FOR_MAX_WORDS: LazyLock<Regex> = LazyLock::new(|| {
         .unwrap()
 });
 
-static BULLET_LINE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?m)^\s*[-*+•]\s+\S").unwrap());
+static BULLET_LINE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?m)^\s*[-*+•]\s+\S").unwrap());
 static NUMBERED_LINE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?m)^\s*\d+[.)]\s+\S").unwrap());
-static HEADING_LINE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?m)^\s*#{1,6}\s+\S").unwrap());
+static HEADING_LINE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?m)^\s*#{1,6}\s+\S").unwrap());
 
 /// Extract every formatting demand stated in `instructions`.
 pub fn detect_rules(instructions: &str) -> Vec<FormatRule> {

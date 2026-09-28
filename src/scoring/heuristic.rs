@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::domain::{Metric, MetricScore, Score, ScoreSource, Trace};
-use crate::scoring::format::{detect_rules, FormatRule};
+use crate::scoring::format::{FormatRule, detect_rules};
 use crate::scoring::overlap::{coverage, f1};
 use crate::scoring::tokenizer::extract_terms;
 
@@ -110,7 +110,9 @@ pub fn adherence(terms: &TraceTerms) -> Option<MetricScore> {
     Some(metric_score(
         Metric::InstructionAdherence,
         value,
-        format!("Harmonic mean of precision ({precision_value:.2}) and recall ({recall_value:.2})."),
+        format!(
+            "Harmonic mean of precision ({precision_value:.2}) and recall ({recall_value:.2})."
+        ),
     ))
 }
 
@@ -149,7 +151,10 @@ pub fn format_compliance(trace: &Trace) -> Option<MetricScore> {
     let value = satisfied.len() as f64 / rules.len() as f64;
 
     let reasoning = if broken.is_empty() {
-        format!("Output satisfies all {} format requirement(s).", rules.len())
+        format!(
+            "Output satisfies all {} format requirement(s).",
+            rules.len()
+        )
     } else {
         let unmet: Vec<String> = broken.iter().map(|rule| rule.describe()).collect();
         format!(
@@ -189,8 +194,9 @@ fn truncate_list(items: &[String], limit: usize) -> String {
 /// ratios to `f1`, so the value is always finite and within 0.0..=1.0. A panic
 /// here means a scoring bug, not bad input.
 fn metric_score(metric: Metric, value: f64, reasoning: String) -> MetricScore {
-    let score = Score::new(value)
-        .unwrap_or_else(|error| panic!("heuristic for {metric} produced an invalid score: {error}"));
+    let score = Score::new(value).unwrap_or_else(|error| {
+        panic!("heuristic for {metric} produced an invalid score: {error}")
+    });
 
     MetricScore::new(metric, score, ScoreSource::Heuristic, reasoning)
 }
@@ -370,9 +376,11 @@ mod tests {
     fn every_score_is_tagged_as_heuristic_and_explained() {
         let scores = evaluate_trace(&trace("Reply as JSON.", "List colours.", "nope"));
 
-        assert!(scores
-            .iter()
-            .all(|entry| entry.source == ScoreSource::Heuristic));
+        assert!(
+            scores
+                .iter()
+                .all(|entry| entry.source == ScoreSource::Heuristic)
+        );
         assert!(scores.iter().all(|entry| !entry.reasoning.is_empty()));
     }
 }
