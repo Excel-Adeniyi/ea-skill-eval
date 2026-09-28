@@ -1,14 +1,32 @@
 [
   {
     "id": "trace-001",
-    "instructions": "Answer using the supplied context.",
+    "instructions": "Answer using the supplied context. Keep the answer under 30 words.",
     "task": "Explain Rust structs.",
-    "output": "A struct groups related values."
+    "output": "A struct groups related values under one name, each field with its own type."
   },
   {
     "id": "trace-002",
-    "instructions": "Keep the answer concise.",
-    "task": "Explain Rust enums.",
-    "output": "An enum represents one of several possible variants."
+    "instructions": "Reply as JSON with bullet points in a summary field.",
+    "task": "List two Rust collection types.",
+    "output": "{\"summary\": \"- Vec is a growable list\n- HashMap stores key value pairs\"}"
+  },
+  {
+    "id": "trace-003",
+    "instructions": "Use numbered steps and mention ownership.",
+    "task": "Describe how borrowing works in Rust.",
+    "output": "Borrowing lets you read data without taking ownership. It is quite useful."
+  },
+  {
+    "id": "trace-004",
+    "instructions": "Answer concisely and mention lifetimes.",
+    "task": "Explain why Rust needs lifetimes.",
+    "output": "The weather today is pleasant and I enjoyed a long walk by the river."
+  },
+  {
+    "id": "trace-005",
+    "instructions": "Reply as JSON.",
+    "task": "Give the capital of France.",
+    "output": "Sure! The capital of France is Paris."
   }
 ]

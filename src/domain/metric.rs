@@ -29,7 +29,7 @@ impl fmt::Display for Metric {
             Self::InstructionAdherence => "Instruction Adherence",
             Self::TaskRelevancy => "Task Relevancy",
             Self::InstructionPrecision => "Instruction Precision",
-            Self::InstructionRecall => "instruction Recall",
+            Self::InstructionRecall => "Instruction Recall",
             Self::FormatCompliance => "Format Compliance",
         };
 
