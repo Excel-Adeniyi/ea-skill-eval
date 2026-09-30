@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Deliberately makes no model calls. Everything here is free, offline and
+# deterministic: the LLM judge is covered by unit tests on request shape and
+# response parsing, never by calling a real model in CI.
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: Test, lint, format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Format
+        run: cargo fmt --check
+
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Test
+        run: cargo test
+
+      - name: CLI smoke test
+        run: |
+          cargo build
+          # Must run clean against the committed samples and emit valid JSON.
+          ./target/debug/ea-skill-eval --format json > /tmp/report.json
+          python3 -c "
+          import json, sys
+          report = json.load(open('/tmp/report.json'))
+          assert report['trace_count'] > 0, 'no traces were scored'
+          assert report['fallback_count'] == 0, 'heuristic run should never fall back'
+          print(f\"ok: scored {report['trace_count']} trace(s)\")
+          "
+
+      - name: Threshold gate on captured traces
+        run: |
+          # Captured traces are gitignored, so this is a no-op unless a run has
+          # committed them deliberately. When present, a regression below the
+          # threshold fails the build via exit code 2.
+          if [ -f samples/captured.json ]; then
+            ./target/debug/ea-skill-eval samples/captured.json --threshold 0.5
+          else
+            echo "no samples/captured.json — skipping threshold gate"
+          fi
+
+  scripts:
+    name: Capture scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # The capture scripts are the easiest thing to break without noticing,
+      # since they are not covered by cargo test.
+      - name: Syntax check
+        run: |
+          python3 -m py_compile scripts/capture.py scripts/build-traces.py
+          bash -n scripts/run-eval.sh
+
+      - name: Capture dry-run makes no calls
+        run: python3 scripts/capture.py --dry-run

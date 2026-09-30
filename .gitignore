@@ -1,1 +1,4 @@
 /target
+.skill-eval-cache/
+samples/cases/raw/
+samples/captured.json

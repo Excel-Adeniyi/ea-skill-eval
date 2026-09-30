@@ -5,7 +5,9 @@ use clap::Parser;
 
 use ea_skill_eval::cli::{Cli, Format, JudgeChoice};
 use ea_skill_eval::domain::{EvalReport, Metric, Trace, TraceEvaluation};
-use ea_skill_eval::judge::{HeuristicJudge, Judge, OpenAiCompatibleJudge, score_with_fallback};
+use ea_skill_eval::judge::{
+    CachedJudge, HeuristicJudge, Judge, JudgeCache, OpenAiCompatibleJudge, score_with_fallback,
+};
 use ea_skill_eval::load_traces;
 use ea_skill_eval::report;
 
@@ -15,6 +17,15 @@ const EXIT_BELOW_THRESHOLD: u8 = 2;
 #[tokio::main]
 async fn main() -> Result<ExitCode> {
     let cli = Cli::parse();
+
+    if cli.clear_cache {
+        let removed = JudgeCache::new(cli.cache_dir.clone()).clear()?;
+        println!(
+            "Cleared {removed} cached result(s) from {}",
+            cli.cache_dir.display()
+        );
+        return Ok(ExitCode::SUCCESS);
+    }
 
     let path = cli.input.to_string_lossy().to_string();
     let traces =
@@ -27,7 +38,8 @@ async fn main() -> Result<ExitCode> {
             if let Some(key) = &cli.api_key {
                 judge = judge.with_api_key(key);
             }
-            evaluate(&traces, &judge, cli.metric_filter()).await
+            let cached = CachedJudge::new(judge, cli.cache());
+            evaluate(&traces, &cached, cli.metric_filter()).await
         }
     };
 

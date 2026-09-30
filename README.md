@@ -20,6 +20,9 @@ cargo run -- --judge llm --model qwen3.6:latest
 # Machine-readable output for CI.
 cargo run -- --format json
 
+# Re-runs of an unchanged trace file are served from cache: 215s -> 0.01s.
+cargo run -- --judge llm --clear-cache
+
 # Gate a build: exit 2 if any trace's mean falls below 0.5.
 cargo run -- --threshold 0.5
 ```
@@ -42,7 +45,21 @@ Options:
       --threshold <FLOAT>    Exit 2 if any trace scores below this
       --metric <METRIC>      adherence | relevancy | precision | recall | format
                              Repeatable; defaults to all five
+      --cache-dir <DIR>      Judged-result cache [default: .skill-eval-cache]
+      --no-cache             Judge every trace afresh
+      --clear-cache          Delete cached results, then exit
 ```
+
+### Caching
+
+Judged results are cached on disk, keyed on a hash of the trace's
+instructions/task/output plus the judge name and prompt version. Editing a
+trace, switching models or changing the rubric all invalidate the entry, so a
+stale score is never served for text that has changed.
+
+Measured on the bundled samples with a local qwen3.6: **214.78s cold, 0.01s
+warm.** Only the LLM judge is cached; the heuristic recomputes faster than a
+disk read.
 
 ### Exit codes
 
@@ -80,6 +97,50 @@ fields existed still load.
 - **`skill_triggered`** — whether the skill actually ran. Separate from
   `prompting` on purpose: the interesting question is whether a skill still
   fires under *implicit* prompting.
+
+## Capturing real traces
+
+`claude` and `codex` both run non-interactively, so capture is automated:
+
+```bash
+./scripts/run-eval.sh --judge llm      # capture -> assemble -> evaluate
+python3 scripts/capture.py --dry-run   # preview without spending usage
+```
+
+See [RUNBOOK.md](RUNBOOK.md) for the full workflow, including manual capture for
+platforms without a scriptable mode.
+
+## The portable skill
+
+The rubric lives in one file, [`skills/trace-evaluator/SKILL.md`](skills/trace-evaluator/SKILL.md),
+with YAML frontmatter for Claude Code. [`AGENTS.md`](AGENTS.md) at the repository
+root points Codex CLI and similar surfaces at that same file rather than
+duplicating it.
+
+That indirection is the point: if two platforms read different rubrics, any
+difference in their scores is an artefact of the instructions, not a finding
+about the models.
+
+### The sentinel marker
+
+The skill instructs agents to begin every response with:
+
+```
+<!-- skill: trace-evaluator v1 -->
+```
+
+Most agent surfaces give no machine-readable signal that an instruction file was
+read, and self-reported "I used the skill" is not evidence. The marker is
+checkable after the fact.
+
+On load, a trace with no explicit `skill_triggered` value has it inferred from
+whether this marker is present; an explicit value in the file always wins. The
+marker is then stripped from the output so its own words cannot inflate
+term-overlap scores.
+
+This matters most for implicit prompting, where the question is whether the
+skill fires *without* being named — which has no answer without an observable
+marker.
 
 ## The five metrics
 
@@ -142,10 +203,22 @@ the platforms in general.
 on consumer hardware — about four minutes for five traces. Use
 `--judge heuristic` while iterating on report output.
 
+## Automation
+
+| What | Cost | Trigger |
+|---|---|---|
+| `/eval` slash command | model usage | you type it |
+| `/eval-check` slash command | free | you type it |
+| CI (`.github/workflows/ci.yml`) | free | every push and PR |
+
+CI makes no model calls. The LLM judge is covered by unit tests on request shape
+and response parsing rather than by calling a real model, so the build stays
+free, fast and deterministic.
+
 ## Development
 
 ```bash
-cargo test           # 107 tests: unit + end-to-end CLI
+cargo test           # 128 tests: unit + end-to-end CLI
 cargo clippy --all-targets
 cargo fmt --check
 ```
@@ -161,9 +234,9 @@ response parsing rather than by calling a real model in CI.
 src/
   cli.rs          clap definition
   domain/         Trace, Metric, Score, MetricScore, EvalReport
-  input/          trace loading
+  input/          trace loading, sentinel detection
   scoring/        tokenizer, overlap, format rules, heuristics
-  judge/          Judge trait, prompt, response parsing, HTTP client
+  judge/          Judge trait, prompt, response parsing, HTTP client, cache
   report/         table and JSON renderers
 ```
 
@@ -175,3 +248,8 @@ Two design notes worth knowing if you extend this:
   the returned futures stay `tokio::spawn`-able if concurrent judging is added.
   Neither form is object-safe, which is why `AnyJudge` exists for runtime
   dispatch.
+- `CachedJudge<J>` is a decorator, not a flag inside each judge, so caching
+  composes with judges that do not exist yet.
+- Cache keys use FNV-1a rather than `DefaultHasher`, whose output is explicitly
+  not stable between Rust releases and would silently orphan every entry on a
+  toolchain upgrade.

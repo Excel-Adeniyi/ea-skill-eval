@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::{Parser, ValueEnum};
 
-use crate::judge::OLLAMA_BASE_URL;
+use crate::judge::{DEFAULT_CACHE_DIR, OLLAMA_BASE_URL};
 
 /// Evaluate captured agent traces on five instruction-following metrics.
 #[derive(Debug, Parser)]
@@ -39,6 +39,18 @@ pub struct Cli {
     /// Only score these metrics. Repeatable; defaults to all five.
     #[arg(long = "metric", value_enum)]
     pub metrics: Vec<MetricChoice>,
+
+    /// Where to store judged results between runs.
+    #[arg(long, default_value = DEFAULT_CACHE_DIR)]
+    pub cache_dir: PathBuf,
+
+    /// Judge every trace afresh, ignoring and bypassing the cache.
+    #[arg(long)]
+    pub no_cache: bool,
+
+    /// Delete every cached result, then exit.
+    #[arg(long)]
+    pub clear_cache: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -77,6 +89,18 @@ impl From<MetricChoice> for crate::domain::Metric {
 }
 
 impl Cli {
+    /// The cache this run should use.
+    ///
+    /// Only the LLM judge is cached. The heuristic recomputes in microseconds,
+    /// so a disk round-trip would be slower than the work it saves.
+    pub fn cache(&self) -> crate::judge::JudgeCache {
+        if self.no_cache || self.judge == JudgeChoice::Heuristic {
+            return crate::judge::JudgeCache::disabled();
+        }
+
+        crate::judge::JudgeCache::new(self.cache_dir.clone())
+    }
+
     /// Metrics to keep, or `None` for all of them.
     pub fn metric_filter(&self) -> Option<Vec<crate::domain::Metric>> {
         if self.metrics.is_empty() {
@@ -157,6 +181,29 @@ mod tests {
                 crate::domain::Metric::FormatCompliance,
             ])
         );
+    }
+
+    #[test]
+    fn caching_is_on_by_default_for_the_llm_judge() {
+        let cli = Cli::try_parse_from(["ea-skill-eval", "--judge", "llm"]).expect("should parse");
+
+        assert!(cli.cache().is_enabled());
+        assert_eq!(cli.cache_dir, PathBuf::from(DEFAULT_CACHE_DIR));
+    }
+
+    #[test]
+    fn the_heuristic_judge_is_never_cached() {
+        let cli = Cli::try_parse_from(["ea-skill-eval"]).expect("should parse");
+
+        assert!(!cli.cache().is_enabled());
+    }
+
+    #[test]
+    fn no_cache_disables_caching_for_the_llm_judge() {
+        let cli = Cli::try_parse_from(["ea-skill-eval", "--judge", "llm", "--no-cache"])
+            .expect("should parse");
+
+        assert!(!cli.cache().is_enabled());
     }
 
     #[test]

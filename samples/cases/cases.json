@@ -1,0 +1,37 @@
+[
+  {
+    "id": "case-1-baseline",
+    "targets": "Control. Everything correct; both platforms should score this well.",
+    "instructions": "Answer in one sentence.",
+    "task": "Explain what a Rust struct is.",
+    "output": "A struct groups related values under a single named type."
+  },
+  {
+    "id": "case-2-format-content-split",
+    "targets": "SKILL.md rule 2: score metrics independently. TaskRelevancy should stay high while FormatCompliance is 0.",
+    "instructions": "Reply as JSON.",
+    "task": "Give the capital of France.",
+    "output": "Sure! The capital of France is Paris."
+  },
+  {
+    "id": "case-3-no-format-requested",
+    "targets": "SKILL.md rule 3: FormatCompliance is 1.0 when no format was requested. qwen3.6 got this wrong locally.",
+    "instructions": "Be accurate.",
+    "task": "Name the largest planet in the solar system.",
+    "output": "Jupiter is the largest planet in the solar system."
+  },
+  {
+    "id": "case-4-meta-instruction-trap",
+    "targets": "SKILL.md rule 4: 'Reply as JSON' is a format requirement, not a content item recall should also penalise.",
+    "instructions": "Reply as JSON with a single key called answer.",
+    "task": "What is 2 + 2?",
+    "output": "{\"answer\": 4}"
+  },
+  {
+    "id": "case-5-total-miss",
+    "targets": "SKILL.md rule 5: use the full range. An output ignoring the task entirely should score 0.0, not 0.3.",
+    "instructions": "Mention lifetimes.",
+    "task": "Explain why Rust needs lifetimes.",
+    "output": "The weather today is pleasant and I enjoyed a long walk."
+  }
+]

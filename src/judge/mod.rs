@@ -1,3 +1,4 @@
+mod cache;
 mod openai_compatible;
 mod prompt;
 mod response;
@@ -9,6 +10,7 @@ use anyhow::Result;
 use crate::domain::{MetricScore, Trace};
 use crate::scoring::evaluate_trace;
 
+pub use cache::{CacheKey, DEFAULT_CACHE_DIR, JudgeCache};
 pub use openai_compatible::{OLLAMA_BASE_URL, OpenAiCompatibleJudge};
 pub use prompt::{PROMPT_VERSION, SYSTEM_PROMPT, build_user_message};
 pub use response::parse_judge_response;
@@ -45,6 +47,49 @@ impl Judge for HeuristicJudge {
 
     async fn score(&self, trace: &Trace) -> Result<Vec<MetricScore>> {
         Ok(evaluate_trace(trace))
+    }
+}
+
+/// Wraps any judge with an on-disk result cache.
+///
+/// A decorator rather than a flag inside each judge: caching is orthogonal to
+/// how scores are produced, and this way it composes with judges that do not
+/// exist yet. Only successes are stored, so a transient network failure is
+/// never frozen into the cache.
+#[derive(Debug, Clone)]
+pub struct CachedJudge<J> {
+    inner: J,
+    cache: JudgeCache,
+}
+
+impl<J: Judge> CachedJudge<J> {
+    pub fn new(inner: J, cache: JudgeCache) -> Self {
+        Self { inner, cache }
+    }
+}
+
+impl<J: Judge + Sync> Judge for CachedJudge<J> {
+    fn name(&self) -> String {
+        self.inner.name()
+    }
+
+    async fn score(&self, trace: &Trace) -> Result<Vec<MetricScore>> {
+        let name = self.inner.name();
+        let key = CacheKey::new(trace, &name);
+
+        if let Some(scores) = self.cache.get(&key) {
+            return Ok(scores);
+        }
+
+        let scores = self.inner.score(trace).await?;
+
+        // A cache write failure must not fail the run: the scores are already
+        // in hand, and the only cost is recomputing them next time.
+        if let Err(error) = self.cache.put(&key, &name, &scores) {
+            eprintln!("warning: could not write cache entry: {error:#}");
+        }
+
+        Ok(scores)
     }
 }
 
