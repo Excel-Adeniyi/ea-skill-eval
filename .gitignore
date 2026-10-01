@@ -1,4 +1,5 @@
-/target
 .skill-eval-cache/
-samples/cases/raw/
+/target
+__pycache__/
 samples/captured.json
+samples/cases/raw/

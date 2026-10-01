@@ -35,7 +35,6 @@ MIN_OUTPUT_CHARS = 120
 
 def quiet_exit():
     """Say nothing, block nothing."""
-    log("quiet exit")
     sys.exit(0)
 
 
@@ -89,21 +88,7 @@ def last_exchange(transcript_path):
     return user_text, assistant_text
 
 
-# Diagnostic: proves whether the hook is invoked at all, independent of whether
-# its output ever reaches the UI. Remove once confirmed.
-LOG = pathlib.Path("/tmp/skill-eval-hook.log")
-
-
-def log(message):
-    try:
-        with LOG.open("a") as handle:
-            handle.write(f"{message}\n")
-    except OSError:
-        pass
-
-
 def main():
-    log("--- invoked ---")
     try:
         payload = json.load(sys.stdin)
     except (json.JSONDecodeError, ValueError):
@@ -151,39 +136,29 @@ def main():
     if not scores:
         quiet_exit()
 
-    label = {
-        "InstructionAdherence": "Instruction Adherence",
-        "TaskRelevancy": "Task Relevancy",
-        "InstructionPrecision": "Instruction Precision",
-        "InstructionRecall": "Instruction Recall",
-        "FormatCompliance": "Format Compliance",
+    short = {
+        "InstructionAdherence": "adher",
+        "TaskRelevancy": "relev",
+        "InstructionPrecision": "prec",
+        "InstructionRecall": "recall",
+        "FormatCompliance": "format",
     }
 
-    # Drawn by hand rather than shelling out to the table renderer: the binary
-    # also prints platform and trigger tables, which say nothing about a single
-    # chat turn.
-    width = max(len(label.get(s["metric"], s["metric"])) for s in scores)
-    rows = [
-        f"│ {label.get(s['metric'], s['metric']):<{width}} │ {s['score']:>5.2f} │"
-        for s in scores
-    ]
-    bar = "─" * (width + 2)
+    # Single line on purpose: systemMessage renders one line, so a bordered
+    # table is silently dropped rather than shown.
+    parts = [f"{short.get(s['metric'], s['metric'])} {s['score']:.2f}" for s in scores]
     mean = report["overall_mean"]
+    message = f"eval (heuristic)  mean {mean:.2f}  │  " + "   ".join(parts)
 
-    table = "\n".join([
-        f"┌{bar}┬───────┐",
-        f"│ {'Metric':<{width}} │ Score │",
-        f"├{bar}┼───────┤",
-        *rows,
-        f"├{bar}┼───────┤",
-        f"│ {'Mean':<{width}} │ {mean:>5.2f} │",
-        f"└{bar}┴───────┘",
-    ])
+    # The full table goes to a file, for anyone who wants to watch it.
+    try:
+        rows = "\n".join(f"  {s['metric']:<22} {s['score']:>5.2f}" for s in scores)
+        pathlib.Path("/tmp/skill-eval-last.txt").write_text(
+            f"{task[:80]}\n\n{rows}\n  {'Mean':<22} {mean:>5.2f}\n"
+        )
+    except OSError:
+        pass
 
-    # No suppressOutput: it hides this hook's own stdout, and stdout is how the
-    # systemMessage reaches the user.
-    message = f"eval (heuristic)\n{table}"
-    log(f"emitting systemMessage, {len(message)} chars")
     print(json.dumps({"systemMessage": message}))
 
 
