@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/hook-eval.py\" 2>/dev/null || true",
+            "timeout": 25,
+            "statusMessage": "Scoring response..."
+          }
+        ]
+      }
+    ]
+  }
+}

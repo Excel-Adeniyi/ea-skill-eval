@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::domain::{Metric, MetricScore, Score, ScoreSource, Trace};
-use crate::scoring::format::{FormatRule, detect_rules};
+use crate::scoring::format::{FormatRule, detect_rules, strip_format_phrases};
 use crate::scoring::overlap::{coverage, f1};
 use crate::scoring::tokenizer::extract_terms;
 
@@ -22,7 +22,10 @@ pub struct TraceTerms {
 
 impl TraceTerms {
     pub fn from_trace(trace: &Trace) -> Self {
-        let instructions = extract_terms(&trace.instructions);
+        // Format directives are stripped first: they are scored by
+        // `format_compliance`, and leaving them here would make recall
+        // penalise an output for not containing the word "JSON".
+        let instructions = extract_terms(&strip_format_phrases(&trace.instructions));
         let task = extract_terms(&trace.task);
         let output = extract_terms(&trace.output);
         let grounded = instructions.union(&task).cloned().collect();
@@ -229,7 +232,9 @@ mod tests {
     #[test]
     fn scores_all_five_metrics_when_a_format_is_requested() {
         let scores = evaluate_trace(&trace(
-            "Reply as JSON.",
+            // Content ("mention colours") plus a format rule ("as JSON"), so
+            // every metric has something to measure.
+            "Reply as JSON. Mention colours.",
             "List two colours.",
             r#"{"colours": ["red", "blue"]}"#,
         ));
@@ -238,9 +243,26 @@ mod tests {
     }
 
     #[test]
-    fn returns_metrics_in_a_stable_order() {
+    fn a_purely_formatting_instruction_has_no_content_recall() {
+        // "Reply as JSON" states no content requirement at all, so recall and
+        // adherence have nothing to measure and are skipped rather than scored.
         let scores = evaluate_trace(&trace(
             "Reply as JSON.",
+            "List two colours.",
+            r#"{"colours": ["red", "blue"]}"#,
+        ));
+
+        let metrics: Vec<Metric> = scores.iter().map(|entry| entry.metric).collect();
+
+        assert!(!metrics.contains(&Metric::InstructionRecall));
+        assert!(!metrics.contains(&Metric::InstructionAdherence));
+        assert!(metrics.contains(&Metric::FormatCompliance));
+    }
+
+    #[test]
+    fn returns_metrics_in_a_stable_order() {
+        let scores = evaluate_trace(&trace(
+            "Reply as JSON. Mention colours.",
             "List colours.",
             r#"{"colours": []}"#,
         ));
@@ -276,10 +298,10 @@ mod tests {
 
     #[test]
     fn recall_drops_for_each_instruction_term_the_output_omits() {
-        // Instruction terms are {mention, ownership, borrowing}; the output has
-        // two of the three, so recall is 2/3 rather than 1.0.
+        // "Mention" is a directive verb, so the content terms are {ownership,
+        // borrowing, lifetimes}. The output covers two of the three.
         let terms = TraceTerms::from_trace(&trace(
-            "Mention ownership and borrowing.",
+            "Mention ownership, borrowing and lifetimes.",
             "Explain memory.",
             "Rust memory uses ownership and borrowing.",
         ));
@@ -374,7 +396,11 @@ mod tests {
 
     #[test]
     fn every_score_is_tagged_as_heuristic_and_explained() {
-        let scores = evaluate_trace(&trace("Reply as JSON.", "List colours.", "nope"));
+        let scores = evaluate_trace(&trace(
+            "Reply as JSON. Mention colours.",
+            "List colours.",
+            "nope",
+        ));
 
         assert!(
             scores
@@ -382,5 +408,38 @@ mod tests {
                 .all(|entry| entry.source == ScoreSource::Heuristic)
         );
         assert!(scores.iter().all(|entry| !entry.reasoning.is_empty()));
+    }
+
+    #[test]
+    fn format_directives_do_not_count_against_recall() {
+        // The only content instruction is "mention ownership"; "Reply as JSON"
+        // is a format directive scored separately.
+        let terms = TraceTerms::from_trace(&trace(
+            "Reply as JSON. Mention ownership.",
+            "Explain Rust memory.",
+            r#"{"answer": "ownership governs Rust memory"}"#,
+        ));
+
+        assert_eq!(
+            recall(&terms).unwrap().score.value(),
+            1.0,
+            "recall should not require the literal word JSON in the output"
+        );
+    }
+
+    #[test]
+    fn a_compliant_json_answer_is_not_penalised_twice() {
+        let scores = evaluate_trace(&trace(
+            "Reply as JSON. Mention ownership.",
+            "Explain Rust memory.",
+            r#"{"answer": "ownership governs Rust memory"}"#,
+        ));
+
+        let format = scores
+            .iter()
+            .find(|entry| entry.metric == Metric::FormatCompliance)
+            .expect("a format rule was stated");
+
+        assert_eq!(format.score.value(), 1.0);
     }
 }

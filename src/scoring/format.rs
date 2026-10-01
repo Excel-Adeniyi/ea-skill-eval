@@ -55,6 +55,16 @@ static ASKS_FOR_HEADING: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)\b(headings?|section titles?)\b").unwrap());
 static ASKS_FOR_CODE_BLOCK: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)\b(code block|code fence|fenced code)\b").unwrap());
+/// Matches a word limit that applies to part of the output, not all of it —
+/// "keep each reasoning under 25 words". Treating that as a whole-output cap
+/// fails every correct multi-field response.
+static SCOPED_WORD_LIMIT: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?i)\b(?:each|every|per)\b[^.]{0,40}?\b(?:at most|no more than|under|max(?:imum)? of|within)\s+\d+\s+words\b",
+    )
+    .unwrap()
+});
+
 static ASKS_FOR_MAX_WORDS: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?i)\b(?:at most|no more than|under|max(?:imum)? of|within)\s+(\d+)\s+words\b")
         .unwrap()
@@ -85,15 +95,55 @@ pub fn detect_rules(instructions: &str) -> Vec<FormatRule> {
     if ASKS_FOR_CODE_BLOCK.is_match(instructions) {
         rules.push(FormatRule::CodeBlock);
     }
-    if let Some(captures) = ASKS_FOR_MAX_WORDS.captures(instructions) {
-        // Capture group 1 is the digits; it matched `\d+`, so the parse only
-        // fails on a number too large for `usize`, which we simply ignore.
-        if let Ok(limit) = captures[1].parse::<usize>() {
-            rules.push(FormatRule::MaxWords(limit));
-        }
+    // A scoped limit ("each reasoning under 25 words") cannot be checked
+    // without knowing the output's structure, so it is not scored at all
+    // rather than scored wrongly. Capture group 1 matched `\d+`, so the parse
+    // only fails on a number too large for `usize`, which we ignore.
+    if !SCOPED_WORD_LIMIT.is_match(instructions)
+        && let Some(captures) = ASKS_FOR_MAX_WORDS.captures(instructions)
+        && let Ok(limit) = captures[1].parse::<usize>()
+    {
+        rules.push(FormatRule::MaxWords(limit));
     }
 
     rules
+}
+
+/// Imperative verbs that introduce an instruction rather than being part of it.
+///
+/// "Mention ownership" asks for *ownership* in the output, not the word
+/// "mention". Counting the verb against recall penalises every output that
+/// follows the instruction without quoting it.
+static DIRECTIVE_VERBS: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?i)\b(?:reply|respond|answer|mention|include|state|provide|write|use|using|keep|ensure|make sure|be sure|output|return|give)\b",
+    )
+    .unwrap()
+});
+
+/// Remove phrases that state *how* to answer, leaving *what* to say.
+///
+/// Instruction recall asks whether the output covered the content it was asked
+/// for. Format directives are a different dimension, already scored by
+/// [`detect_rules`] — leaving them in the term set means an output that
+/// correctly replies in JSON is penalised for not containing the word "JSON".
+pub fn strip_format_phrases(instructions: &str) -> String {
+    let mut cleaned = instructions.to_string();
+
+    for pattern in [
+        &*ASKS_FOR_JSON,
+        &*ASKS_FOR_BULLETS,
+        &*ASKS_FOR_NUMBERED,
+        &*ASKS_FOR_HEADING,
+        &*ASKS_FOR_CODE_BLOCK,
+        &*ASKS_FOR_MAX_WORDS,
+        &*SCOPED_WORD_LIMIT,
+        &*DIRECTIVE_VERBS,
+    ] {
+        cleaned = pattern.replace_all(&cleaned, " ").to_string();
+    }
+
+    cleaned
 }
 
 fn word_count(text: &str) -> usize {
@@ -171,5 +221,47 @@ mod tests {
     fn word_limit_rule_counts_words() {
         assert!(FormatRule::MaxWords(3).is_satisfied_by("one two three"));
         assert!(!FormatRule::MaxWords(3).is_satisfied_by("one two three four"));
+    }
+
+    #[test]
+    fn a_scoped_word_limit_is_not_a_whole_output_limit() {
+        let rules = detect_rules("Reply as JSON. Keep each reasoning under 25 words.");
+
+        assert!(rules.contains(&FormatRule::Json));
+        assert!(
+            !rules
+                .iter()
+                .any(|rule| matches!(rule, FormatRule::MaxWords(_))),
+            "a per-field limit must not be scored against the whole output"
+        );
+    }
+
+    #[test]
+    fn an_unscoped_word_limit_still_applies() {
+        assert_eq!(
+            detect_rules("Answer in under 20 words."),
+            vec![FormatRule::MaxWords(20)]
+        );
+    }
+
+    #[test]
+    fn strips_format_directives_from_instructions() {
+        let stripped =
+            strip_format_phrases("Reply as JSON using bullet points. Mention ownership.");
+
+        assert!(!stripped.to_lowercase().contains("json"));
+        assert!(!stripped.to_lowercase().contains("bullet"));
+        // The directive verb goes too; its object is what recall should want.
+        assert!(!stripped.to_lowercase().contains("mention"));
+        assert!(stripped.contains("ownership"));
+    }
+
+    #[test]
+    fn strips_directive_verbs_but_keeps_their_object() {
+        let stripped = strip_format_phrases("Mention ownership and borrowing.");
+
+        assert!(!stripped.to_lowercase().contains("mention"));
+        assert!(stripped.contains("ownership"));
+        assert!(stripped.contains("borrowing"));
     }
 }
