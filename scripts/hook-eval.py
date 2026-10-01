@@ -88,6 +88,68 @@ def last_exchange(transcript_path):
     return user_text, assistant_text
 
 
+JUDGE_PROMPT = """You are an evaluation judge. Score the ANSWER against the QUESTION on five metrics, each 0.0 to 1.0:
+- InstructionAdherence: did the answer do what was asked?
+- TaskRelevancy: did it address the question?
+- InstructionPrecision: was it free of padding and unrequested content?
+- InstructionRecall: did it cover everything asked?
+- FormatCompliance: did it obey any stated format? Score 1.0 if no format was requested.
+
+Reply with ONLY this JSON and no other text:
+{{"scores":[{{"metric":"InstructionAdherence","score":0.0,"reasoning":""}},{{"metric":"TaskRelevancy","score":0.0,"reasoning":""}},{{"metric":"InstructionPrecision","score":0.0,"reasoning":""}},{{"metric":"InstructionRecall","score":0.0,"reasoning":""}},{{"metric":"FormatCompliance","score":0.0,"reasoning":""}}]}}
+Keep each reasoning under 15 words.
+
+QUESTION:
+{question}
+
+ANSWER:
+{answer}
+"""
+
+
+def judge_with_codex(task, output, timeout):
+    """Score with Codex, an independent model.
+
+    Codex rather than Claude on purpose: a model scoring its own answers has a
+    self-preference bias, and the whole point of a judge is independence.
+    Returns None on any failure so the caller falls back to the heuristic.
+    """
+    prompt = JUDGE_PROMPT.format(question=task[:3000], answer=output[:6000])
+
+    try:
+        completed = subprocess.run(
+            ["codex", "exec", "-"],
+            input=prompt, capture_output=True, text=True, timeout=timeout,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return None
+
+    if completed.returncode != 0:
+        return None
+
+    raw = completed.stdout
+    start, end = raw.find("{"), raw.rfind("}")
+    if start == -1 or end <= start:
+        return None
+
+    try:
+        parsed = json.loads(raw[start:end + 1])
+        entries = parsed["scores"]
+    except (json.JSONDecodeError, KeyError, TypeError):
+        return None
+
+    scores = []
+    for entry in entries:
+        try:
+            value = float(entry["score"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if 0.0 <= value <= 1.0:
+            scores.append({"metric": str(entry.get("metric", "?")), "score": value})
+
+    return scores or None
+
+
 def main():
     try:
         payload = json.load(sys.stdin)
@@ -102,37 +164,42 @@ def main():
     if not task or not output or len(output) < MIN_OUTPUT_CHARS:
         quiet_exit()
 
-    project = pathlib.Path(__file__).resolve().parent.parent
-    binary = project / "target" / "debug" / "ea-skill-eval"
-    if not binary.exists():
-        quiet_exit()
+    judge_timeout = int(os.environ.get("SKILL_EVAL_JUDGE_TIMEOUT", "60"))
+    scores = judge_with_codex(task, output, judge_timeout)
+    source = "codex"
 
-    trace = [{
-        "id": "turn",
-        "instructions": os.environ.get("SKILL_EVAL_INSTRUCTIONS", DEFAULT_INSTRUCTIONS),
-        # Transcripts can be long; the scorer only needs the gist.
-        "task": task[:4000],
-        "output": output[:8000],
-        "platform": "claude_code",
-        "prompting": "implicit",
-    }]
+    if scores is None:
+        # Fall back to the offline scorer so a turn is never left unscored.
+        source = "heuristic"
+        project = pathlib.Path(__file__).resolve().parent.parent
+        binary = project / "target" / "debug" / "ea-skill-eval"
+        if not binary.exists():
+            quiet_exit()
 
-    handle = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
-    json.dump(trace, handle)
-    handle.close()
+        trace = [{
+            "id": "turn",
+            "instructions": os.environ.get("SKILL_EVAL_INSTRUCTIONS", DEFAULT_INSTRUCTIONS),
+            "task": task[:4000],
+            "output": output[:8000],
+            "platform": "claude_code",
+            "prompting": "implicit",
+        }]
 
-    try:
-        completed = subprocess.run(
-            [str(binary), handle.name, "--format", "json"],
-            capture_output=True, text=True, timeout=20,
-        )
-        report = json.loads(completed.stdout)
-    except Exception:
-        quiet_exit()
-    finally:
-        os.unlink(handle.name)
+        handle = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
+        json.dump(trace, handle)
+        handle.close()
 
-    scores = report["evaluations"][0]["scores"]
+        try:
+            completed = subprocess.run(
+                [str(binary), handle.name, "--format", "json"],
+                capture_output=True, text=True, timeout=20,
+            )
+            scores = json.loads(completed.stdout)["evaluations"][0]["scores"]
+        except Exception:
+            quiet_exit()
+        finally:
+            os.unlink(handle.name)
+
     if not scores:
         quiet_exit()
 
@@ -147,8 +214,8 @@ def main():
     # Single line on purpose: systemMessage renders one line, so a bordered
     # table is silently dropped rather than shown.
     parts = [f"{short.get(s['metric'], s['metric'])} {s['score']:.2f}" for s in scores]
-    mean = report["overall_mean"]
-    message = f"eval (heuristic)  mean {mean:.2f}  │  " + "   ".join(parts)
+    mean = sum(s["score"] for s in scores) / len(scores)
+    message = f"eval ({source})  mean {mean:.2f}  │  " + "   ".join(parts)
 
     # The full table goes to a file, for anyone who wants to watch it.
     try:
