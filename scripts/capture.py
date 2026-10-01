@@ -50,11 +50,14 @@ def strip_frontmatter(text):
 def build_prompt(case, prompting, skill_text):
     """The text sent to the agent.
 
-    The rubric is inlined rather than relied upon being auto-loaded, because
-    platforms disagree on where instruction files live and a capture run that
-    silently used no skill at all is worse than useless. The explicit/implicit
-    distinction is about whether the *request* names the skill, which is the
-    variable under test.
+    When `skill_text` is None the rubric is NOT included, and the agent must
+    find the skill itself (`.claude/skills/` for Claude Code, `AGENTS.md` for
+    Codex). That is the only way to test real discovery: with the rubric
+    inlined, "implicit" only tests whether a model applies instructions it can
+    already see, which is a much weaker claim.
+
+    Inlining is still the safer default for measuring rubric-following, because
+    a run that silently used no skill at all measures something else entirely.
     """
     trace = (
         f"INSTRUCTIONS:\n{case['instructions']}\n\n"
@@ -66,6 +69,9 @@ def build_prompt(case, prompting, skill_text):
         ask = "Use the trace-evaluator skill to evaluate this trace:"
     else:
         ask = "Evaluate this agent trace:"
+
+    if skill_text is None:
+        return f"{ask}\n\n{trace}"
 
     return f"{skill_text}\n\n---\n\n{ask}\n\n{trace}"
 
@@ -104,6 +110,12 @@ def main():
     parser.add_argument("--raw", default="samples/cases/raw")
     parser.add_argument("--timeout", type=int, default=300)
     parser.add_argument("--dry-run", action="store_true", help="List runs without executing.")
+    parser.add_argument(
+        "--no-inline",
+        action="store_true",
+        help="Do not paste the rubric into the prompt. The agent must discover "
+             "the skill itself — the real test of whether it loads.",
+    )
     parser.add_argument("--force", action="store_true", help="Re-run cases already captured.")
     parser.add_argument(
         "--allow-missing-sentinel",
@@ -123,7 +135,9 @@ def main():
         if not cases:
             sys.exit(f"no cases matched {sorted(wanted)}")
 
-    skill_text = strip_frontmatter(pathlib.Path(SKILL_PATH).read_text())
+    skill_text = None if args.no_inline else strip_frontmatter(
+        pathlib.Path(SKILL_PATH).read_text()
+    )
     raw_dir = pathlib.Path(args.raw)
     raw_dir.mkdir(parents=True, exist_ok=True)
 
@@ -134,8 +148,9 @@ def main():
         for case in cases
     ]
 
+    mode = "rubric NOT inlined (testing discovery)" if args.no_inline else "rubric inlined"
     print(f"{len(planned)} run(s): {len(platforms)} platform(s) x "
-          f"{len(promptings)} prompting mode(s) x {len(cases)} case(s)\n")
+          f"{len(promptings)} prompting mode(s) x {len(cases)} case(s) — {mode}\n")
 
     if args.dry_run:
         for platform, prompting, case in planned:

@@ -4,6 +4,7 @@
 #   ./scripts/run-eval.sh                          # all platforms, heuristic scoring
 #   ./scripts/run-eval.sh --judge llm              # score with the local model
 #   ./scripts/run-eval.sh --platform claude_code   # one platform only
+#   ./scripts/run-eval.sh --no-inline --force      # test real skill discovery
 #
 # Captures already on disk are reused; pass --force to re-run them.
 set -euo pipefail
@@ -19,7 +20,8 @@ while [[ $# -gt 0 ]]; do
     --platform) CAPTURE_ARGS+=(--platform "$2"); shift 2 ;;
     --case)     CAPTURE_ARGS+=(--case "$2"); shift 2 ;;
     --prompting) CAPTURE_ARGS+=(--prompting "$2"); shift 2 ;;
-    --force)    CAPTURE_ARGS+=(--force); shift ;;
+    --force)     CAPTURE_ARGS+=(--force); shift ;;
+    --no-inline) CAPTURE_ARGS+=(--no-inline); shift ;;
     *) echo "unknown option: $1" >&2; exit 64 ;;
   esac
 done
