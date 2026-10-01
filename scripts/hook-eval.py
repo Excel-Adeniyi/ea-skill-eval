@@ -90,9 +90,11 @@ def last_exchange(transcript_path):
 
 JUDGE_PROMPT = """You are a strict evaluation judge for a chat answer. Score the ANSWER against the QUESTION on five dimensions, each 0.0 to 1.0:
 
-- Correctness: are the factual claims true? Score 0.0 if the answer states
-  something false, however well written. If it makes no checkable factual
-  claims, score 1.0.
+- Correctness: are the factual claims true, considered on their own? This is
+  ONLY about truth. An answer that is completely off-topic but says nothing
+  false scores 1.0 here — its irrelevance is punished under Relevance, not
+  here. Score 0.0 only when the answer asserts something factually false.
+  If it makes no checkable factual claims, score 1.0.
 - Relevance: does it answer the question that was actually asked, rather than
   a nearby one?
 - Completeness: does it cover what the question asked for, or leave gaps?
@@ -101,8 +103,10 @@ JUDGE_PROMPT = """You are a strict evaluation judge for a chat answer. Score the
 - Clarity: would the person who asked understand it? Penalise undefined jargon
   and unexplained leaps.
 
-Judge Correctness independently of how polished the writing is. A confident,
-tidy answer that is wrong must score low.
+Judge each dimension independently. Do not let a low score on one drag down
+another:
+- A tidy, confident answer that is FALSE scores low on Correctness, high on Clarity.
+- An off-topic answer that is TRUE scores 1.0 on Correctness, 0.0 on Relevance.
 
 Reply with ONLY this JSON and no other text:
 {{"scores":[{{"metric":"Correctness","score":0.0,"reasoning":""}},{{"metric":"Relevance","score":0.0,"reasoning":""}},{{"metric":"Completeness","score":0.0,"reasoning":""}},{{"metric":"Conciseness","score":0.0,"reasoning":""}},{{"metric":"Clarity","score":0.0,"reasoning":""}}]}}
