@@ -1,5 +1,4 @@
 .skill-eval-cache/
 /target
 __pycache__/
-samples/captured.json
 samples/cases/raw/

@@ -7,6 +7,9 @@ use crate::domain::{MetricScore, Trace};
 use crate::judge::Judge;
 use crate::judge::prompt::{SYSTEM_PROMPT, build_user_message};
 use crate::judge::response::parse_judge_response;
+use crate::judge::verifier::{
+    VERIFIER_SYSTEM_PROMPT, Verification, build_verifier_message, parse_verification,
+};
 
 /// Ollama's OpenAI-compatible endpoint, served locally by default.
 pub const OLLAMA_BASE_URL: &str = "http://localhost:11434/v1";
@@ -53,6 +56,24 @@ impl OpenAiCompatibleJudge {
         self
     }
 
+    /// Check an answer's factual claims against a reference document.
+    ///
+    /// Separate from `score` because it answers a different question. The judge
+    /// asks "did this follow the instructions?" from its own reading; the
+    /// verifier asks "does this source support these claims?" and is forbidden
+    /// from using its own knowledge.
+    pub async fn verify(&self, reference: &str, answer: &str) -> Result<Verification> {
+        let content = self
+            .chat(
+                VERIFIER_SYSTEM_PROMPT,
+                build_verifier_message(reference, answer),
+            )
+            .await?;
+
+        parse_verification(&content)
+            .with_context(|| format!("could not read verification from {}", self.model))
+    }
+
     pub fn model(&self) -> &str {
         &self.model
     }
@@ -64,23 +85,33 @@ impl Judge for OpenAiCompatibleJudge {
     }
 
     async fn score(&self, trace: &Trace) -> Result<Vec<MetricScore>> {
+        let content = self.chat(SYSTEM_PROMPT, build_user_message(trace)).await?;
+
+        parse_judge_response(&content)
+            .with_context(|| format!("could not read scores from {}", self.model))
+    }
+}
+
+impl OpenAiCompatibleJudge {
+    /// One chat round-trip, returning the assistant's text.
+    async fn chat(&self, system: &str, user: String) -> Result<String> {
         let request = ChatRequest {
             model: &self.model,
             stream: false,
             // Asking for a JSON object up front is what took the probe runs to
-            // 4/4 parseable. `parse_judge_response` still defends against
-            // fences and prose, because not every endpoint honours this.
+            // 4/4 parseable. The parsers still defend against fences and prose,
+            // because not every endpoint honours this.
             response_format: ResponseFormat {
                 kind: "json_object",
             },
             messages: vec![
                 ChatMessage {
                     role: "system",
-                    content: SYSTEM_PROMPT.to_string(),
+                    content: system.to_string(),
                 },
                 ChatMessage {
                     role: "user",
-                    content: build_user_message(trace),
+                    content: user,
                 },
             ],
         };
@@ -110,15 +141,12 @@ impl Judge for OpenAiCompatibleJudge {
         let parsed: ChatResponse = serde_json::from_str(&body)
             .with_context(|| format!("unexpected response envelope from {url}: {body}"))?;
 
-        let content = parsed
+        parsed
             .choices
             .into_iter()
             .next()
             .map(|choice| choice.message.content)
-            .ok_or_else(|| anyhow!("judge returned no choices"))?;
-
-        parse_judge_response(&content)
-            .with_context(|| format!("could not read scores from {}", self.model))
+            .ok_or_else(|| anyhow!("judge returned no choices"))
     }
 }
 

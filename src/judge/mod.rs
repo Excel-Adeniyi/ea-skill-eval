@@ -2,6 +2,7 @@ mod cache;
 mod openai_compatible;
 mod prompt;
 mod response;
+mod verifier;
 
 use std::future::Future;
 
@@ -14,6 +15,10 @@ pub use cache::{CacheKey, DEFAULT_CACHE_DIR, JudgeCache};
 pub use openai_compatible::{OLLAMA_BASE_URL, OpenAiCompatibleJudge};
 pub use prompt::{PROMPT_VERSION, SYSTEM_PROMPT, build_user_message};
 pub use response::parse_judge_response;
+pub use verifier::{
+    VERIFIER_SYSTEM_PROMPT, Verdict, Verification, VerifiedClaim, build_verifier_message,
+    parse_verification,
+};
 
 /// Anything that can score a trace.
 ///

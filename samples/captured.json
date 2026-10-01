@@ -1,0 +1,182 @@
+[
+  {
+    "id": "claude_code-explicit-case-1-baseline",
+    "instructions": "Begin the response with the sentinel marker. Score exactly five metrics named InstructionAdherence, TaskRelevancy, InstructionPrecision, InstructionRecall and FormatCompliance. Reply with only a JSON object and no preamble, commentary or markdown fences. Keep each reasoning under 25 words.",
+    "task": "Evaluate this agent trace.\n\nINSTRUCTIONS:\nAnswer in one sentence.\n\nTASK:\nExplain what a Rust struct is.\n\nOUTPUT:\nA struct groups related values under a single named type.",
+    "output": "<!-- skill: trace-evaluator v1 -->\n{\"scores\":[\n  {\"metric\":\"InstructionAdherence\",\"score\":1.0,\"reasoning\":\"Delivered exactly one sentence as instructed.\"},\n  {\"metric\":\"TaskRelevancy\",\"score\":1.0,\"reasoning\":\"Accurately describes a struct as grouping related values under a named type.\"},\n  {\"metric\":\"InstructionPrecision\",\"score\":1.0,\"reasoning\":\"No filler, preamble, or content beyond the single requested sentence.\"},\n  {\"metric\":\"InstructionRecall\",\"score\":1.0,\"reasoning\":\"Covered the one thing asked: an explanation of a struct.\"},\n  {\"metric\":\"FormatCompliance\",\"score\":1.0,\"reasoning\":\"One-sentence constraint satisfied; single sentence with terminal period.\"}\n]}",
+    "platform": "claude_code",
+    "model": "claude-opus-5",
+    "prompting": "explicit"
+  },
+  {
+    "id": "claude_code-explicit-case-2-format-content-split",
+    "instructions": "Begin the response with the sentinel marker. Score exactly five metrics named InstructionAdherence, TaskRelevancy, InstructionPrecision, InstructionRecall and FormatCompliance. Reply with only a JSON object and no preamble, commentary or markdown fences. Keep each reasoning under 25 words.",
+    "task": "Evaluate this agent trace.\n\nINSTRUCTIONS:\nReply as JSON.\n\nTASK:\nGive the capital of France.\n\nOUTPUT:\nSure! The capital of France is Paris.",
+    "output": "<!-- skill: trace-evaluator v1 -->\n{\"scores\":[\n  {\"metric\":\"InstructionAdherence\",\"score\":0.0,\"reasoning\":\"Ignored the explicit instruction to reply in JSON.\"},\n  {\"metric\":\"TaskRelevancy\",\"score\":1.0,\"reasoning\":\"Correctly identified Paris as the capital of France.\"},\n  {\"metric\":\"InstructionPrecision\",\"score\":0.7,\"reasoning\":\"On point apart from the unrequested 'Sure!' filler opener.\"},\n  {\"metric\":\"InstructionRecall\",\"score\":1.0,\"reasoning\":\"Covered the single content item asked for: the capital.\"},\n  {\"metric\":\"FormatCompliance\",\"score\":0.0,\"reasoning\":\"Plain prose delivered where JSON was explicitly required.\"}\n]}",
+    "platform": "claude_code",
+    "model": "claude-opus-5",
+    "prompting": "explicit"
+  },
+  {
+    "id": "claude_code-explicit-case-3-no-format-requested",
+    "instructions": "Begin the response with the sentinel marker. Score exactly five metrics named InstructionAdherence, TaskRelevancy, InstructionPrecision, InstructionRecall and FormatCompliance. Reply with only a JSON object and no preamble, commentary or markdown fences. Keep each reasoning under 25 words.",
+    "task": "Evaluate this agent trace.\n\nINSTRUCTIONS:\nBe accurate.\n\nTASK:\nName the largest planet in the solar system.\n\nOUTPUT:\nJupiter is the largest planet in the solar system.",
+    "output": "<!-- skill: trace-evaluator v1 -->\n{\"scores\":[\n  {\"metric\":\"InstructionAdherence\",\"score\":1.0,\"reasoning\":\"Statement is factually accurate, satisfying the sole instruction.\"},\n  {\"metric\":\"TaskRelevancy\",\"score\":1.0,\"reasoning\":\"Names Jupiter, exactly the planet asked for.\"},\n  {\"metric\":\"InstructionPrecision\",\"score\":1.0,\"reasoning\":\"Single sentence, no filler or unrequested additions.\"},\n  {\"metric\":\"InstructionRecall\",\"score\":1.0,\"reasoning\":\"Accuracy was the only requirement and it is met.\"},\n  {\"metric\":\"FormatCompliance\",\"score\":1.0,\"reasoning\":\"No formatting requirement stated, so nothing to violate.\"}\n]}",
+    "platform": "claude_code",
+    "model": "claude-opus-5",
+    "prompting": "explicit"
+  },
+  {
+    "id": "claude_code-explicit-case-4-meta-instruction-trap",
+    "instructions": "Begin the response with the sentinel marker. Score exactly five metrics named InstructionAdherence, TaskRelevancy, InstructionPrecision, InstructionRecall and FormatCompliance. Reply with only a JSON object and no preamble, commentary or markdown fences. Keep each reasoning under 25 words.",
+    "task": "Evaluate this agent trace.\n\nINSTRUCTIONS:\nReply as JSON with a single key called answer.\n\nTASK:\nWhat is 2 + 2?\n\nOUTPUT:\n{\"answer\": 4}",
+    "output": "<!-- skill: trace-evaluator v1 -->\n{\"scores\":[\n  {\"metric\":\"InstructionAdherence\",\"score\":1.0,\"reasoning\":\"Returned JSON with exactly the single key 'answer' as instructed.\"},\n  {\"metric\":\"TaskRelevancy\",\"score\":1.0,\"reasoning\":\"Answered 2 + 2 correctly as 4.\"},\n  {\"metric\":\"InstructionPrecision\",\"score\":1.0,\"reasoning\":\"No filler, no extra keys, no prose outside the JSON object.\"},\n  {\"metric\":\"InstructionRecall\",\"score\":1.0,\"reasoning\":\"Covered the one required item, the answer value.\"},\n  {\"metric\":\"FormatCompliance\",\"score\":1.0,\"reasoning\":\"Valid JSON object with the single required 'answer' key.\"}\n]}",
+    "platform": "claude_code",
+    "model": "claude-opus-5",
+    "prompting": "explicit"
+  },
+  {
+    "id": "claude_code-explicit-case-5-total-miss",
+    "instructions": "Begin the response with the sentinel marker. Score exactly five metrics named InstructionAdherence, TaskRelevancy, InstructionPrecision, InstructionRecall and FormatCompliance. Reply with only a JSON object and no preamble, commentary or markdown fences. Keep each reasoning under 25 words.",
+    "task": "Evaluate this agent trace.\n\nINSTRUCTIONS:\nMention lifetimes.\n\nTASK:\nExplain why Rust needs lifetimes.\n\nOUTPUT:\nThe weather today is pleasant and I enjoyed a long walk.",
+    "output": "<!-- skill: trace-evaluator v1 -->\n{\"scores\":[\n  {\"metric\":\"InstructionAdherence\",\"score\":0.0,\"reasoning\":\"Never mentions lifetimes; output is about weather and walking.\"},\n  {\"metric\":\"TaskRelevancy\",\"score\":0.0,\"reasoning\":\"No mention of Rust or why lifetimes are needed.\"},\n  {\"metric\":\"InstructionPrecision\",\"score\":0.0,\"reasoning\":\"Entire output is unrequested content about weather and a walk.\"},\n  {\"metric\":\"InstructionRecall\",\"score\":0.0,\"reasoning\":\"Omits the one required item: lifetimes.\"},\n  {\"metric\":\"FormatCompliance\",\"score\":1.0,\"reasoning\":\"No formatting requirement stated, so nothing to violate.\"}\n]}",
+    "platform": "claude_code",
+    "model": "claude-opus-5",
+    "prompting": "explicit"
+  },
+  {
+    "id": "claude_code-implicit-case-1-baseline",
+    "instructions": "Begin the response with the sentinel marker. Score exactly five metrics named InstructionAdherence, TaskRelevancy, InstructionPrecision, InstructionRecall and FormatCompliance. Reply with only a JSON object and no preamble, commentary or markdown fences. Keep each reasoning under 25 words.",
+    "task": "Evaluate this agent trace.\n\nINSTRUCTIONS:\nAnswer in one sentence.\n\nTASK:\nExplain what a Rust struct is.\n\nOUTPUT:\nA struct groups related values under a single named type.",
+    "output": "<!-- skill: trace-evaluator v1 -->\n{\"scores\":[\n  {\"metric\":\"InstructionAdherence\",\"score\":1.0,\"reasoning\":\"Single sentence, exactly as instructed.\"},\n  {\"metric\":\"TaskRelevancy\",\"score\":0.9,\"reasoning\":\"Defines a struct as grouping related values under a named type; Rust-specific detail absent.\"},\n  {\"metric\":\"InstructionPrecision\",\"score\":1.0,\"reasoning\":\"No filler, preamble, or unrequested elaboration.\"},\n  {\"metric\":\"InstructionRecall\",\"score\":1.0,\"reasoning\":\"Covered the one explanation requested.\"},\n  {\"metric\":\"FormatCompliance\",\"score\":1.0,\"reasoning\":\"One-sentence length constraint satisfied.\"}\n]}",
+    "platform": "claude_code",
+    "model": "claude-opus-5",
+    "prompting": "implicit"
+  },
+  {
+    "id": "claude_code-implicit-case-2-format-content-split",
+    "instructions": "Begin the response with the sentinel marker. Score exactly five metrics named InstructionAdherence, TaskRelevancy, InstructionPrecision, InstructionRecall and FormatCompliance. Reply with only a JSON object and no preamble, commentary or markdown fences. Keep each reasoning under 25 words.",
+    "task": "Evaluate this agent trace.\n\nINSTRUCTIONS:\nReply as JSON.\n\nTASK:\nGive the capital of France.\n\nOUTPUT:\nSure! The capital of France is Paris.",
+    "output": "<!-- skill: trace-evaluator v1 -->\n{\"scores\":[\n  {\"metric\":\"InstructionAdherence\",\"score\":0.0,\"reasoning\":\"Ignored the sole instruction to reply as JSON.\"},\n  {\"metric\":\"TaskRelevancy\",\"score\":1.0,\"reasoning\":\"Names Paris, the correct capital of France.\"},\n  {\"metric\":\"InstructionPrecision\",\"score\":0.7,\"reasoning\":\"'Sure!' is unrequested conversational filler; rest is on point.\"},\n  {\"metric\":\"InstructionRecall\",\"score\":1.0,\"reasoning\":\"Covered the one content item asked for: the capital.\"},\n  {\"metric\":\"FormatCompliance\",\"score\":0.0,\"reasoning\":\"Plain prose sentence instead of the required JSON structure.\"}\n]}",
+    "platform": "claude_code",
+    "model": "claude-opus-5",
+    "prompting": "implicit"
+  },
+  {
+    "id": "claude_code-implicit-case-3-no-format-requested",
+    "instructions": "Begin the response with the sentinel marker. Score exactly five metrics named InstructionAdherence, TaskRelevancy, InstructionPrecision, InstructionRecall and FormatCompliance. Reply with only a JSON object and no preamble, commentary or markdown fences. Keep each reasoning under 25 words.",
+    "task": "Evaluate this agent trace.\n\nINSTRUCTIONS:\nBe accurate.\n\nTASK:\nName the largest planet in the solar system.\n\nOUTPUT:\nJupiter is the largest planet in the solar system.",
+    "output": "<!-- skill: trace-evaluator v1 -->\n{\"scores\":[\n  {\"metric\":\"InstructionAdherence\",\"score\":1.0,\"reasoning\":\"Statement is factually accurate, satisfying the sole instruction.\"},\n  {\"metric\":\"TaskRelevancy\",\"score\":1.0,\"reasoning\":\"Names Jupiter, exactly the planet the task asked for.\"},\n  {\"metric\":\"InstructionPrecision\",\"score\":1.0,\"reasoning\":\"Single sentence, no filler or unrequested elaboration.\"},\n  {\"metric\":\"InstructionRecall\",\"score\":1.0,\"reasoning\":\"Accuracy was the only requirement and it is met.\"},\n  {\"metric\":\"FormatCompliance\",\"score\":1.0,\"reasoning\":\"No formatting requirement stated, so nothing to violate.\"}\n]}",
+    "platform": "claude_code",
+    "model": "claude-opus-5",
+    "prompting": "implicit"
+  },
+  {
+    "id": "claude_code-implicit-case-4-meta-instruction-trap",
+    "instructions": "Begin the response with the sentinel marker. Score exactly five metrics named InstructionAdherence, TaskRelevancy, InstructionPrecision, InstructionRecall and FormatCompliance. Reply with only a JSON object and no preamble, commentary or markdown fences. Keep each reasoning under 25 words.",
+    "task": "Evaluate this agent trace.\n\nINSTRUCTIONS:\nReply as JSON with a single key called answer.\n\nTASK:\nWhat is 2 + 2?\n\nOUTPUT:\n{\"answer\": 4}",
+    "output": "<!-- skill: trace-evaluator v1 -->\n{\"scores\":[\n  {\"metric\":\"InstructionAdherence\",\"score\":1.0,\"reasoning\":\"Returned JSON with the single required key 'answer'.\"},\n  {\"metric\":\"TaskRelevancy\",\"score\":1.0,\"reasoning\":\"Answered 2 + 2 correctly as 4.\"},\n  {\"metric\":\"InstructionPrecision\",\"score\":1.0,\"reasoning\":\"No extra keys, prose, or filler beyond the requested answer.\"},\n  {\"metric\":\"InstructionRecall\",\"score\":1.0,\"reasoning\":\"Covered the single item asked: the arithmetic result.\"},\n  {\"metric\":\"FormatCompliance\",\"score\":1.0,\"reasoning\":\"Valid JSON object with exactly one key named 'answer'.\"}\n]}",
+    "platform": "claude_code",
+    "model": "claude-opus-5",
+    "prompting": "implicit"
+  },
+  {
+    "id": "claude_code-implicit-case-5-total-miss",
+    "instructions": "Begin the response with the sentinel marker. Score exactly five metrics named InstructionAdherence, TaskRelevancy, InstructionPrecision, InstructionRecall and FormatCompliance. Reply with only a JSON object and no preamble, commentary or markdown fences. Keep each reasoning under 25 words.",
+    "task": "Evaluate this agent trace.\n\nINSTRUCTIONS:\nMention lifetimes.\n\nTASK:\nExplain why Rust needs lifetimes.\n\nOUTPUT:\nThe weather today is pleasant and I enjoyed a long walk.",
+    "output": "<!-- skill: trace-evaluator v1 -->\n{\"scores\":[\n  {\"metric\":\"InstructionAdherence\",\"score\":0.0,\"reasoning\":\"Never mentions lifetimes; output is about weather and a walk.\"},\n  {\"metric\":\"TaskRelevancy\",\"score\":0.0,\"reasoning\":\"Says nothing about Rust or why lifetimes are needed.\"},\n  {\"metric\":\"InstructionPrecision\",\"score\":0.0,\"reasoning\":\"Entire output is unrequested content about weather and walking.\"},\n  {\"metric\":\"InstructionRecall\",\"score\":0.0,\"reasoning\":\"Omits the only required item: mentioning lifetimes.\"},\n  {\"metric\":\"FormatCompliance\",\"score\":1.0,\"reasoning\":\"No formatting requirement stated, so nothing to violate.\"}\n]}",
+    "platform": "claude_code",
+    "model": "claude-opus-5",
+    "prompting": "implicit"
+  },
+  {
+    "id": "codex_cli-explicit-case-1-baseline",
+    "instructions": "Begin the response with the sentinel marker. Score exactly five metrics named InstructionAdherence, TaskRelevancy, InstructionPrecision, InstructionRecall and FormatCompliance. Reply with only a JSON object and no preamble, commentary or markdown fences. Keep each reasoning under 25 words.",
+    "task": "Evaluate this agent trace.\n\nINSTRUCTIONS:\nAnswer in one sentence.\n\nTASK:\nExplain what a Rust struct is.\n\nOUTPUT:\nA struct groups related values under a single named type.",
+    "output": "<!-- skill: trace-evaluator v1 -->\n{\"scores\":[\n  {\"metric\":\"InstructionAdherence\",\"score\":1.0,\"reasoning\":\"Answered in exactly one sentence as instructed.\"},\n  {\"metric\":\"TaskRelevancy\",\"score\":1.0,\"reasoning\":\"Accurately explains that a Rust struct groups related values into a named type.\"},\n  {\"metric\":\"InstructionPrecision\",\"score\":1.0,\"reasoning\":\"Contains only the requested concise explanation without extraneous content.\"},\n  {\"metric\":\"InstructionRecall\",\"score\":1.0,\"reasoning\":\"Fully addresses what a Rust struct is.\"},\n  {\"metric\":\"FormatCompliance\",\"score\":1.0,\"reasoning\":\"Uses the explicitly required one-sentence format.\"}\n]}",
+    "platform": "codex_cli",
+    "model": "gpt-5-codex",
+    "prompting": "explicit"
+  },
+  {
+    "id": "codex_cli-explicit-case-2-format-content-split",
+    "instructions": "Begin the response with the sentinel marker. Score exactly five metrics named InstructionAdherence, TaskRelevancy, InstructionPrecision, InstructionRecall and FormatCompliance. Reply with only a JSON object and no preamble, commentary or markdown fences. Keep each reasoning under 25 words.",
+    "task": "Evaluate this agent trace.\n\nINSTRUCTIONS:\nReply as JSON.\n\nTASK:\nGive the capital of France.\n\nOUTPUT:\nSure! The capital of France is Paris.",
+    "output": "<!-- skill: trace-evaluator v1 -->\n{\"scores\":[\n  {\"metric\":\"InstructionAdherence\",\"score\":0.0,\"reasoning\":\"Ignored the explicit instruction to reply in JSON.\"},\n  {\"metric\":\"TaskRelevancy\",\"score\":1.0,\"reasoning\":\"Correctly identified Paris as the capital of France.\"},\n  {\"metric\":\"InstructionPrecision\",\"score\":0.7,\"reasoning\":\"Mostly on point, though 'Sure!' is unrequested filler.\"},\n  {\"metric\":\"InstructionRecall\",\"score\":1.0,\"reasoning\":\"Covered the single thing asked for.\"},\n  {\"metric\":\"FormatCompliance\",\"score\":0.0,\"reasoning\":\"Plain prose where JSON was explicitly required.\"}\n]}",
+    "platform": "codex_cli",
+    "model": "gpt-5-codex",
+    "prompting": "explicit"
+  },
+  {
+    "id": "codex_cli-explicit-case-3-no-format-requested",
+    "instructions": "Begin the response with the sentinel marker. Score exactly five metrics named InstructionAdherence, TaskRelevancy, InstructionPrecision, InstructionRecall and FormatCompliance. Reply with only a JSON object and no preamble, commentary or markdown fences. Keep each reasoning under 25 words.",
+    "task": "Evaluate this agent trace.\n\nINSTRUCTIONS:\nBe accurate.\n\nTASK:\nName the largest planet in the solar system.\n\nOUTPUT:\nJupiter is the largest planet in the solar system.",
+    "output": "<!-- skill: trace-evaluator v1 -->\n{\"scores\":[\n  {\"metric\":\"InstructionAdherence\",\"score\":1.0,\"reasoning\":\"Accurately identified Jupiter, fully satisfying the instruction.\"},\n  {\"metric\":\"TaskRelevancy\",\"score\":1.0,\"reasoning\":\"Directly answered which planet is largest in the solar system.\"},\n  {\"metric\":\"InstructionPrecision\",\"score\":1.0,\"reasoning\":\"Included only the requested answer without irrelevant content.\"},\n  {\"metric\":\"InstructionRecall\",\"score\":1.0,\"reasoning\":\"Named the largest planet as requested.\"},\n  {\"metric\":\"FormatCompliance\",\"score\":1.0,\"reasoning\":\"No output format was specified.\"}\n]}",
+    "platform": "codex_cli",
+    "model": "gpt-5-codex",
+    "prompting": "explicit"
+  },
+  {
+    "id": "codex_cli-explicit-case-4-meta-instruction-trap",
+    "instructions": "Begin the response with the sentinel marker. Score exactly five metrics named InstructionAdherence, TaskRelevancy, InstructionPrecision, InstructionRecall and FormatCompliance. Reply with only a JSON object and no preamble, commentary or markdown fences. Keep each reasoning under 25 words.",
+    "task": "Evaluate this agent trace.\n\nINSTRUCTIONS:\nReply as JSON with a single key called answer.\n\nTASK:\nWhat is 2 + 2?\n\nOUTPUT:\n{\"answer\": 4}",
+    "output": "<!-- skill: trace-evaluator v1 -->\n{\"scores\":[{\"metric\":\"InstructionAdherence\",\"score\":1.0,\"reasoning\":\"Returned valid JSON with the single required key, answer.\"},{\"metric\":\"TaskRelevancy\",\"score\":1.0,\"reasoning\":\"Correctly answered that 2 + 2 equals 4.\"},{\"metric\":\"InstructionPrecision\",\"score\":1.0,\"reasoning\":\"Included only the requested answer without extraneous content.\"},{\"metric\":\"InstructionRecall\",\"score\":1.0,\"reasoning\":\"Provided the complete requested calculation result.\"},{\"metric\":\"FormatCompliance\",\"score\":1.0,\"reasoning\":\"Used valid JSON containing exactly one key named answer.\"}]}",
+    "platform": "codex_cli",
+    "model": "gpt-5-codex",
+    "prompting": "explicit"
+  },
+  {
+    "id": "codex_cli-explicit-case-5-total-miss",
+    "instructions": "Begin the response with the sentinel marker. Score exactly five metrics named InstructionAdherence, TaskRelevancy, InstructionPrecision, InstructionRecall and FormatCompliance. Reply with only a JSON object and no preamble, commentary or markdown fences. Keep each reasoning under 25 words.",
+    "task": "Evaluate this agent trace.\n\nINSTRUCTIONS:\nMention lifetimes.\n\nTASK:\nExplain why Rust needs lifetimes.\n\nOUTPUT:\nThe weather today is pleasant and I enjoyed a long walk.",
+    "output": "<!-- skill: trace-evaluator v1 -->\n{\"scores\":[\n  {\"metric\":\"InstructionAdherence\",\"score\":0.0,\"reasoning\":\"Did not mention lifetimes as explicitly instructed.\"},\n  {\"metric\":\"TaskRelevancy\",\"score\":0.0,\"reasoning\":\"Discussed weather and walking instead of explaining Rust lifetimes.\"},\n  {\"metric\":\"InstructionPrecision\",\"score\":0.0,\"reasoning\":\"The entire response consists of unrelated personal and weather content.\"},\n  {\"metric\":\"InstructionRecall\",\"score\":0.0,\"reasoning\":\"Omitted both lifetimes and why Rust needs them.\"},\n  {\"metric\":\"FormatCompliance\",\"score\":1.0,\"reasoning\":\"No response format was specified.\"}\n]}",
+    "platform": "codex_cli",
+    "model": "gpt-5-codex",
+    "prompting": "explicit"
+  },
+  {
+    "id": "codex_cli-implicit-case-1-baseline",
+    "instructions": "Begin the response with the sentinel marker. Score exactly five metrics named InstructionAdherence, TaskRelevancy, InstructionPrecision, InstructionRecall and FormatCompliance. Reply with only a JSON object and no preamble, commentary or markdown fences. Keep each reasoning under 25 words.",
+    "task": "Evaluate this agent trace.\n\nINSTRUCTIONS:\nAnswer in one sentence.\n\nTASK:\nExplain what a Rust struct is.\n\nOUTPUT:\nA struct groups related values under a single named type.",
+    "output": "<!-- skill: trace-evaluator v1 -->\n{\"scores\":[\n  {\"metric\":\"InstructionAdherence\",\"score\":1.0,\"reasoning\":\"Answered the requested explanation in exactly one sentence.\"},\n  {\"metric\":\"TaskRelevancy\",\"score\":1.0,\"reasoning\":\"Accurately explains that a Rust struct groups related values into a named type.\"},\n  {\"metric\":\"InstructionPrecision\",\"score\":1.0,\"reasoning\":\"Contains only the concise definition requested, with no extraneous material.\"},\n  {\"metric\":\"InstructionRecall\",\"score\":1.0,\"reasoning\":\"Fully provides the requested explanation of a Rust struct.\"},\n  {\"metric\":\"FormatCompliance\",\"score\":1.0,\"reasoning\":\"The output consists of one sentence as required.\"}\n]}",
+    "platform": "codex_cli",
+    "model": "gpt-5-codex",
+    "prompting": "implicit"
+  },
+  {
+    "id": "codex_cli-implicit-case-2-format-content-split",
+    "instructions": "Begin the response with the sentinel marker. Score exactly five metrics named InstructionAdherence, TaskRelevancy, InstructionPrecision, InstructionRecall and FormatCompliance. Reply with only a JSON object and no preamble, commentary or markdown fences. Keep each reasoning under 25 words.",
+    "task": "Evaluate this agent trace.\n\nINSTRUCTIONS:\nReply as JSON.\n\nTASK:\nGive the capital of France.\n\nOUTPUT:\nSure! The capital of France is Paris.",
+    "output": "<!-- skill: trace-evaluator v1 -->\n{\"scores\":[\n  {\"metric\":\"InstructionAdherence\",\"score\":0.0,\"reasoning\":\"Ignored the explicit instruction to reply in JSON.\"},\n  {\"metric\":\"TaskRelevancy\",\"score\":1.0,\"reasoning\":\"Correctly identified Paris as the capital of France.\"},\n  {\"metric\":\"InstructionPrecision\",\"score\":0.7,\"reasoning\":\"Mostly on point, though 'Sure!' is unrequested filler.\"},\n  {\"metric\":\"InstructionRecall\",\"score\":1.0,\"reasoning\":\"Covered the single thing asked for.\"},\n  {\"metric\":\"FormatCompliance\",\"score\":0.0,\"reasoning\":\"Plain prose where JSON was explicitly required.\"}\n]}",
+    "platform": "codex_cli",
+    "model": "gpt-5-codex",
+    "prompting": "implicit"
+  },
+  {
+    "id": "codex_cli-implicit-case-3-no-format-requested",
+    "instructions": "Begin the response with the sentinel marker. Score exactly five metrics named InstructionAdherence, TaskRelevancy, InstructionPrecision, InstructionRecall and FormatCompliance. Reply with only a JSON object and no preamble, commentary or markdown fences. Keep each reasoning under 25 words.",
+    "task": "Evaluate this agent trace.\n\nINSTRUCTIONS:\nBe accurate.\n\nTASK:\nName the largest planet in the solar system.\n\nOUTPUT:\nJupiter is the largest planet in the solar system.",
+    "output": "<!-- skill: trace-evaluator v1 -->\n{\"scores\":[\n  {\"metric\":\"InstructionAdherence\",\"score\":1.0,\"reasoning\":\"Accurately stated that Jupiter is the largest planet.\"},\n  {\"metric\":\"TaskRelevancy\",\"score\":1.0,\"reasoning\":\"Directly answered which planet is largest in the solar system.\"},\n  {\"metric\":\"InstructionPrecision\",\"score\":1.0,\"reasoning\":\"Included only the requested answer and necessary context.\"},\n  {\"metric\":\"InstructionRecall\",\"score\":1.0,\"reasoning\":\"Fully addressed the single requested fact.\"},\n  {\"metric\":\"FormatCompliance\",\"score\":1.0,\"reasoning\":\"No output format was specified.\"}\n]}",
+    "platform": "codex_cli",
+    "model": "gpt-5-codex",
+    "prompting": "implicit"
+  },
+  {
+    "id": "codex_cli-implicit-case-4-meta-instruction-trap",
+    "instructions": "Begin the response with the sentinel marker. Score exactly five metrics named InstructionAdherence, TaskRelevancy, InstructionPrecision, InstructionRecall and FormatCompliance. Reply with only a JSON object and no preamble, commentary or markdown fences. Keep each reasoning under 25 words.",
+    "task": "Evaluate this agent trace.\n\nINSTRUCTIONS:\nReply as JSON with a single key called answer.\n\nTASK:\nWhat is 2 + 2?\n\nOUTPUT:\n{\"answer\": 4}",
+    "output": "<!-- skill: trace-evaluator v1 -->\n{\"scores\":[\n  {\"metric\":\"InstructionAdherence\",\"score\":1.0,\"reasoning\":\"Returned valid JSON with exactly the required answer key.\"},\n  {\"metric\":\"TaskRelevancy\",\"score\":1.0,\"reasoning\":\"Correctly answered that 2 + 2 equals 4.\"},\n  {\"metric\":\"InstructionPrecision\",\"score\":1.0,\"reasoning\":\"Included only the requested answer without extraneous content.\"},\n  {\"metric\":\"InstructionRecall\",\"score\":1.0,\"reasoning\":\"Fully provided the requested arithmetic result.\"},\n  {\"metric\":\"FormatCompliance\",\"score\":1.0,\"reasoning\":\"Used valid JSON containing a single key named answer.\"}\n]}",
+    "platform": "codex_cli",
+    "model": "gpt-5-codex",
+    "prompting": "implicit"
+  },
+  {
+    "id": "codex_cli-implicit-case-5-total-miss",
+    "instructions": "Begin the response with the sentinel marker. Score exactly five metrics named InstructionAdherence, TaskRelevancy, InstructionPrecision, InstructionRecall and FormatCompliance. Reply with only a JSON object and no preamble, commentary or markdown fences. Keep each reasoning under 25 words.",
+    "task": "Evaluate this agent trace.\n\nINSTRUCTIONS:\nMention lifetimes.\n\nTASK:\nExplain why Rust needs lifetimes.\n\nOUTPUT:\nThe weather today is pleasant and I enjoyed a long walk.",
+    "output": "<!-- skill: trace-evaluator v1 -->\n{\"scores\":[\n  {\"metric\":\"InstructionAdherence\",\"score\":0.0,\"reasoning\":\"Did not mention lifetimes as explicitly instructed.\"},\n  {\"metric\":\"TaskRelevancy\",\"score\":0.0,\"reasoning\":\"Discussed weather and walking instead of explaining Rust lifetimes.\"},\n  {\"metric\":\"InstructionPrecision\",\"score\":0.0,\"reasoning\":\"The entire response contains unrelated, unrequested content.\"},\n  {\"metric\":\"InstructionRecall\",\"score\":0.0,\"reasoning\":\"Omitted both lifetimes and why Rust needs them.\"},\n  {\"metric\":\"FormatCompliance\",\"score\":1.0,\"reasoning\":\"No formatting requirement was specified.\"}\n]}",
+    "platform": "codex_cli",
+    "model": "gpt-5-codex",
+    "prompting": "implicit"
+  }
+]

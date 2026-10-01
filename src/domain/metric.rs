@@ -2,9 +2,14 @@ use std::fmt;
 use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
-//  This is a enum for all 5 metrics we need for the eval
+/// The dimensions an answer is scored on.
+///
+/// Five measure instruction-following. `Correctness` is a different axis
+/// entirely — an answer can follow every instruction perfectly and still be
+/// false — and is produced by the claim verifier rather than the judge.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Metric {
+    Correctness,
     InstructionAdherence,
     TaskRelevancy,
     InstructionPrecision,
@@ -13,8 +18,9 @@ pub enum Metric {
 }
 
 impl Metric {
-    pub fn all() -> [Self; 5] {
+    pub fn all() -> [Self; 6] {
         [
+            Self::Correctness,
             Self::InstructionAdherence,
             Self::TaskRelevancy,
             Self::InstructionPrecision,
@@ -46,6 +52,7 @@ impl FromStr for Metric {
             .collect();
 
         match normalised.as_str() {
+            "correctness" => Ok(Self::Correctness),
             "instructionadherence" => Ok(Self::InstructionAdherence),
             "taskrelevancy" => Ok(Self::TaskRelevancy),
             "instructionprecision" => Ok(Self::InstructionPrecision),
@@ -59,6 +66,7 @@ impl FromStr for Metric {
 impl fmt::Display for Metric {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = match self {
+            Self::Correctness => "Correctness",
             Self::InstructionAdherence => "Instruction Adherence",
             Self::TaskRelevancy => "Task Relevancy",
             Self::InstructionPrecision => "Instruction Precision",
@@ -76,8 +84,8 @@ mod tests {
 
     #[test]
 
-    fn all_returns_the_five_metrics() {
-        assert_eq!(Metric::all().len(), 5);
+    fn all_returns_every_metric() {
+        assert_eq!(Metric::all().len(), 6);
     }
 
     #[test]

@@ -88,15 +88,24 @@ def last_exchange(transcript_path):
     return user_text, assistant_text
 
 
-JUDGE_PROMPT = """You are an evaluation judge. Score the ANSWER against the QUESTION on five metrics, each 0.0 to 1.0:
-- InstructionAdherence: did the answer do what was asked?
-- TaskRelevancy: did it address the question?
-- InstructionPrecision: was it free of padding and unrequested content?
-- InstructionRecall: did it cover everything asked?
-- FormatCompliance: did it obey any stated format? Score 1.0 if no format was requested.
+JUDGE_PROMPT = """You are a strict evaluation judge for a chat answer. Score the ANSWER against the QUESTION on five dimensions, each 0.0 to 1.0:
+
+- Correctness: are the factual claims true? Score 0.0 if the answer states
+  something false, however well written. If it makes no checkable factual
+  claims, score 1.0.
+- Relevance: does it answer the question that was actually asked, rather than
+  a nearby one?
+- Completeness: does it cover what the question asked for, or leave gaps?
+- Conciseness: is it free of padding, filler and unrequested tangents? Length
+  alone is not padding if every part earns its place.
+- Clarity: would the person who asked understand it? Penalise undefined jargon
+  and unexplained leaps.
+
+Judge Correctness independently of how polished the writing is. A confident,
+tidy answer that is wrong must score low.
 
 Reply with ONLY this JSON and no other text:
-{{"scores":[{{"metric":"InstructionAdherence","score":0.0,"reasoning":""}},{{"metric":"TaskRelevancy","score":0.0,"reasoning":""}},{{"metric":"InstructionPrecision","score":0.0,"reasoning":""}},{{"metric":"InstructionRecall","score":0.0,"reasoning":""}},{{"metric":"FormatCompliance","score":0.0,"reasoning":""}}]}}
+{{"scores":[{{"metric":"Correctness","score":0.0,"reasoning":""}},{{"metric":"Relevance","score":0.0,"reasoning":""}},{{"metric":"Completeness","score":0.0,"reasoning":""}},{{"metric":"Conciseness","score":0.0,"reasoning":""}},{{"metric":"Clarity","score":0.0,"reasoning":""}}]}}
 Keep each reasoning under 15 words.
 
 QUESTION:
@@ -116,11 +125,19 @@ def judge_with_codex(task, output, timeout):
     """
     prompt = JUDGE_PROMPT.format(question=task[:3000], answer=output[:6000])
 
+    # Run from a neutral directory. Inside this repo, Codex reads AGENTS.md,
+    # loads the trace-evaluator skill, and follows that rubric instead of the
+    # prompt below — returning the project's five instruction metrics rather
+    # than the chat ones asked for here.
     try:
-        completed = subprocess.run(
-            ["codex", "exec", "-"],
-            input=prompt, capture_output=True, text=True, timeout=timeout,
-        )
+        with tempfile.TemporaryDirectory() as neutral:
+            completed = subprocess.run(
+                # --skip-git-repo-check: the neutral directory is not a repo,
+                # which Codex otherwise refuses to run in.
+                ["codex", "exec", "--skip-git-repo-check", "-"],
+                input=prompt, capture_output=True, text=True,
+                timeout=timeout, cwd=neutral,
+            )
     except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
         return None
 
@@ -146,6 +163,13 @@ def judge_with_codex(task, output, timeout):
             continue
         if 0.0 <= value <= 1.0:
             scores.append({"metric": str(entry.get("metric", "?")), "score": value})
+
+    # A response naming the project's instruction metrics means some other
+    # rubric was applied; fall back rather than report metrics we did not ask
+    # for under labels the caller will misread.
+    expected = {"Correctness", "Relevance", "Completeness", "Conciseness", "Clarity"}
+    if not any(s["metric"] in expected for s in scores):
+        return None
 
     return scores or None
 
@@ -194,25 +218,38 @@ def main():
                 [str(binary), handle.name, "--format", "json"],
                 capture_output=True, text=True, timeout=20,
             )
-            scores = json.loads(completed.stdout)["evaluations"][0]["scores"]
+            raw = json.loads(completed.stdout)["evaluations"][0]["scores"]
         except Exception:
             quiet_exit()
         finally:
             os.unlink(handle.name)
 
+        # Only TaskRelevancy compares your question to my answer. The other
+        # heuristic metrics score against a made-up instruction string, so they
+        # measure nothing here.
+        scores = [
+            {"metric": "Relevance", "score": s["score"]}
+            for s in raw
+            if s["metric"] == "TaskRelevancy"
+        ]
+
     if not scores:
         quiet_exit()
 
     short = {
-        "InstructionAdherence": "adher",
-        "TaskRelevancy": "relev",
-        "InstructionPrecision": "prec",
-        "InstructionRecall": "recall",
-        "FormatCompliance": "format",
+        "Correctness": "correct",
+        "Relevance": "relev",
+        "Completeness": "complete",
+        "Conciseness": "concise",
+        "Clarity": "clarity",
     }
 
     # Single line on purpose: systemMessage renders one line, so a bordered
     # table is silently dropped rather than shown.
+    scores = [s for s in scores if s["metric"] != "FormatCompliance"]
+    if not scores:
+        quiet_exit()
+
     parts = [f"{short.get(s['metric'], s['metric'])} {s['score']:.2f}" for s in scores]
     mean = sum(s["score"] for s in scores) / len(scores)
     message = f"eval ({source})  mean {mean:.2f}  │  " + "   ".join(parts)

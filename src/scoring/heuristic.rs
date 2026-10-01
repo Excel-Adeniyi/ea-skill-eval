@@ -268,7 +268,14 @@ mod tests {
         ));
         let order: Vec<Metric> = scores.iter().map(|entry| entry.metric).collect();
 
-        assert_eq!(order, Metric::all().to_vec());
+        // The heuristic scores instruction-following only. `Correctness` needs a
+        // reference document to check against, which term overlap cannot supply.
+        let expected: Vec<Metric> = Metric::all()
+            .into_iter()
+            .filter(|metric| *metric != Metric::Correctness)
+            .collect();
+
+        assert_eq!(order, expected);
     }
 
     #[test]

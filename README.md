@@ -8,6 +8,29 @@ Built to compare how the same portable skill behaves across different agent
 platforms — Claude Code, Codex CLI, Qwen Code — by scoring the traces each one
 produces.
 
+## Try it in 30 seconds
+
+Needs only Rust. No API keys, no model downloads, no Python.
+
+```bash
+git clone <this repo> && cd skill-eval
+cargo run -- samples/captured.json
+```
+
+That scores 20 real captured traces — 10 from Claude Code, 10 from Codex CLI —
+and prints the comparison tables. Everything in that command runs offline.
+
+### What you need for the rest
+
+| Feature | Requires |
+|---|---|
+| Heuristic scoring, tests, CI | Rust only |
+| Capture your own traces | Python 3, plus `claude` and/or `codex` on PATH |
+| LLM judge (`--judge llm`) | [Ollama](https://ollama.com) + `ollama pull qwen3.6` |
+| Live chat scoring (Stop hook) | Claude Code, plus `codex` on PATH |
+
+Nothing beyond the first row is needed to see the project work.
+
 ## Quick start
 
 ```bash

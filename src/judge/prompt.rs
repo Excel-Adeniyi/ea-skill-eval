@@ -62,13 +62,26 @@ mod tests {
     }
 
     #[test]
-    fn system_prompt_names_every_metric() {
+    fn system_prompt_names_every_metric_the_judge_produces() {
+        // `Correctness` is deliberately absent: it is produced by the claim
+        // verifier against a reference document, not by the judge reading from
+        // its own knowledge. Asking the judge for it here would reintroduce
+        // exactly the unsourced opinion the verifier exists to replace.
         for metric in crate::domain::Metric::all() {
+            if metric == crate::domain::Metric::Correctness {
+                continue;
+            }
+
             let name = format!("{metric:?}");
             assert!(
                 SYSTEM_PROMPT.contains(&name),
                 "system prompt is missing {name}"
             );
         }
+    }
+
+    #[test]
+    fn the_judge_does_not_claim_to_score_correctness() {
+        assert!(!SYSTEM_PROMPT.contains("Correctness"));
     }
 }
